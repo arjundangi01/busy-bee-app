@@ -56,20 +56,26 @@ export type IOnboardingResult = {
   };
 };
 
+export type ITrendDayStatus = "hit" | "miss" | "today";
+
+export type ITrendDay = {
+  date: string;
+  status: ITrendDayStatus;
+};
+
+export type ITodayCard = {
+  sessionsCompleted: number;
+  minutesFocused: number;
+  tasksWaiting: number;
+};
+
 export type IDashboard = {
   name: string;
-  score: number;
   streakDays: number;
-  rings: {
-    streak: number;
-    focus: number;
-    momentum: number;
-  };
-  todayFocusMinutes: number;
-  currentMission: {
-    id: string;
-    title: string;
-    progressPercent: number;
-    nextTask: string | null;
-  } | null;
+  backlogCount: number;
+  timeReclaimedMinutes: number;
+  trend: ITrendDay[];
+  today: ITodayCard;
+  patternSignal: string | null;
+  isColdStart: boolean;
 };

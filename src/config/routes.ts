@@ -11,5 +11,6 @@ export const routes = {
     progress: (): "/progress" => "/progress",
     settings: (): "/settings" => "/settings",
   },
+  startMission: (): "/mission/new" => "/mission/new",
   mission: (id: string) => `/mission/${id}` as const,
 } as const;
