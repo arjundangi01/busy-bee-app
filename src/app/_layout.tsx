@@ -1,7 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { queryClient } from "@/lib/query-client";
-import { OnboardingAnswersProvider } from "@/module/onboarding/context/OnboardingAnswersContext";
+import { OnboardingPermissionsProvider } from "@/module/onboarding/context/OnboardingPermissionsContext";
 import { AuthProvider } from "@/store/auth-store";
 import { useColors } from "@/theme";
 
@@ -11,7 +11,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <OnboardingAnswersProvider>
+        <OnboardingPermissionsProvider>
           <Stack
             screenOptions={{
               headerShown: false,
@@ -19,7 +19,7 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: colors.bg },
             }}
           />
-        </OnboardingAnswersProvider>
+        </OnboardingPermissionsProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
