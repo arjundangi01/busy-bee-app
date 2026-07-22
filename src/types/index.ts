@@ -73,3 +73,29 @@ export type IDashboard = {
   patternSignal: string | null;
   isColdStart: boolean;
 };
+
+export type IStreakCalendarCellStatus = "hit" | "miss" | "today" | "no-history";
+
+export type IStreakCalendarCell = {
+  date: string;
+  status: IStreakCalendarCellStatus;
+};
+
+export type IFocusWindow = {
+  startHour: number;
+  endHour: number;
+};
+
+export type IProgress = {
+  currentStreakDays: number;
+  bestStreakDays: number;
+  streakCalendar: IStreakCalendarCell[];
+  timeReclaimedThisWeekMinutes: number;
+  timeReclaimedByWeekMinutes: number[];
+  focusDurationByWeekMinutes: number[];
+  currentAvgFocusMinutes: number | null;
+  bestFocusWindow: IFocusWindow | null;
+  toughestDay: string | null;
+  distractionAttemptsThisWeek: number;
+  isColdStart: boolean;
+};
