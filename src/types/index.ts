@@ -1,4 +1,4 @@
-import { COMMITMENT_LEVEL, GOAL, MISSION_STATUS, TASK_STATUS, USER_ROLE } from "@/utils/enums";
+import { MISSION_STATUS, SESSION_END_REASON, TASK_STATUS } from "@/utils/enums";
 
 export type IApiResponse<T> = {
   success: boolean;
@@ -15,11 +15,6 @@ export type IUser = {
 export type IAuthResult = {
   user: IUser;
   token: string;
-};
-
-export type IOnboardingInsight = {
-  unmanagedWeeks: number;
-  guidedDays: number;
 };
 
 export type IMissionTask = {
@@ -45,20 +40,14 @@ export type IMissionPlan = {
   remainingSteps: string[];
 };
 
-export type IOnboardingResult = {
-  profile: {
-    goal: GOAL;
-    age: number;
-    role: USER_ROLE;
-    commitmentLevel: COMMITMENT_LEVEL;
-  };
-  insight: IOnboardingInsight;
-  mission: {
-    id: string;
-    title: string;
-    estimatedMinutes: number;
-    tasks: { id: string; title: string; order: number; estimatedMinutes: number }[];
-  };
+export type IFocusSession = {
+  id: string;
+  missionId: string;
+  startedAt: string;
+  endedAt: string | null;
+  elapsedSeconds: number | null;
+  sessionEndReason: SESSION_END_REASON | null;
+  blockedAttemptCount: number;
 };
 
 export type ITrendDayStatus = "hit" | "miss" | "today";
