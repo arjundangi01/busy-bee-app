@@ -28,7 +28,7 @@ npx tsc --noEmit
 
 - `src/app/` — routes only (Expo Router file-based routing: `index.tsx`, `_layout.tsx`, etc.)
 - `src/lib/api.ts` — shared axios client, reads `EXPO_PUBLIC_API_URL`. Extend this one client rather than creating a second.
-- `src/types/`, `src/utils/enums/` — seed folders for shared types/enums; add feature folders under `src/` (components/hooks/types per feature) as real features land — nothing to scaffold speculatively yet.
+- `src/module/<feature>/` — feature logic (components/hooks/templates/context/utils), one folder per feature.
 - Path alias `@/*` → `src/*` is already configured in `tsconfig.json`.
 
-This app has no dedicated FE convention doc yet (`code-practice-fe.md` at the project root targets the Next.js web app, not this Expo client) — align new code with the patterns above until one exists.
+See `code-practice-fe.md` in this directory for the full FE convention doc (architecture, data fetching, state, forms, etc.) — the one at the project root targets the Next.js web app, not this Expo client.
