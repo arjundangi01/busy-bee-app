@@ -1,4 +1,4 @@
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -9,15 +9,10 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useDashboard } from "@/module/dashboard/hooks/useDashboard";
 import { routes } from "@/config/routes";
 import { IColorTokens, spacing, useColors } from "@/theme";
+import { formatMinutesAsHoursAndMinutes } from "@/lib/utils/format";
 import { ITrendDay } from "@/types";
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
-
-const formatReclaimed = (minutes: number): string => {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-};
 
 export function HomeTemplate() {
   const colors = useColors();
@@ -68,9 +63,9 @@ export function HomeTemplate() {
               <View
                 style={styles.statTile}
                 accessible
-                accessibilityLabel={`${formatReclaimed(dashboard.timeReclaimedMinutes)} reclaimed`}
+                accessibilityLabel={`${formatMinutesAsHoursAndMinutes(dashboard.timeReclaimedMinutes)} reclaimed`}
               >
-                <Text style={styles.statValue}>{formatReclaimed(dashboard.timeReclaimedMinutes)}</Text>
+                <Text style={styles.statValue}>{formatMinutesAsHoursAndMinutes(dashboard.timeReclaimedMinutes)}</Text>
                 <Text style={styles.statLabel}>Reclaimed</Text>
               </View>
             </View>
@@ -93,13 +88,19 @@ export function HomeTemplate() {
               </View>
             </View>
 
-            <StatCard>
-              <Text style={styles.todayHeadline}>Yesterday&apos;s a blank — today&apos;s wide open.</Text>
-              <Text style={styles.todayMeta}>
-                {dashboard.today.sessionsCompleted} sessions · {dashboard.today.minutesFocused}m focused
-                today · {dashboard.today.tasksWaiting} flexible tasks waiting
-              </Text>
-            </StatCard>
+            <Pressable
+              onPress={() => router.push(routes.eveningReview())}
+              accessibilityRole="button"
+              accessibilityLabel="See today's evening review"
+            >
+              <StatCard>
+                <Text style={styles.todayHeadline}>Yesterday&apos;s a blank — today&apos;s wide open.</Text>
+                <Text style={styles.todayMeta}>
+                  {dashboard.today.sessionsCompleted} sessions · {dashboard.today.minutesFocused}m focused
+                  today · {dashboard.today.tasksWaiting} flexible tasks waiting
+                </Text>
+              </StatCard>
+            </Pressable>
 
             <Text style={styles.signal}>
               {dashboard.isColdStart || !dashboard.patternSignal
