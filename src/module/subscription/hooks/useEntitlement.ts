@@ -14,6 +14,9 @@ export function useEntitlement() {
 
   return {
     isPro: data?.isPro ?? false,
+    // null means "not loaded yet" here, same as "unlimited" would mean once
+    // loaded — callers must gate cap-dependent behavior on isLoading too.
+    limits: data?.limits ?? { dailySessionCap: null, sessionDurationCapSeconds: null },
     isLoading,
     error: error ? getErrorMessage(error) : null,
     refresh: refetch,

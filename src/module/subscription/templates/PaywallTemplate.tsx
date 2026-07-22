@@ -7,10 +7,12 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
 import { getProPackage, isPurchasesConfigured, purchasePackage } from "@/lib/purchases";
 import { markPaywallDismissedToday } from "@/module/subscription/utils/dismissal";
-import { FALLBACK_PRO_PRICE_LABEL, FREE_TIER_DAILY_SESSION_CAP } from "@/module/subscription/utils/constants";
+import { FALLBACK_PRO_PRICE_LABEL } from "@/module/subscription/utils/constants";
+import { formatDurationCap } from "@/module/subscription/utils/formatLimits";
 import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
 import { routes } from "@/config/routes";
 import { IColorTokens, spacing, useColors } from "@/theme";
+import { IPlanLimits } from "@/types";
 
 type PaywallTemplateProps = {
   entry: PAYWALL_ENTRY;
@@ -19,27 +21,49 @@ type PaywallTemplateProps = {
 
 type PageState = "default" | "processing" | "confirmation" | "failed";
 
-const HEADLINE_COPY: Record<PAYWALL_ENTRY, { headline: string; subline: string; confirmationBody: string }> = {
-  [PAYWALL_ENTRY.SESSION_CAP]: {
-    headline: `You've used your ${FREE_TIER_DAILY_SESSION_CAP} free sessions today.`,
-    subline: "Pro removes the daily cap — start as many sessions as you need.",
-    confirmationBody: "The daily cap is gone — go as long as you need.",
-  },
-  [PAYWALL_ENTRY.ANALYTICS]: {
-    headline: "Advanced analytics is part of Pro.",
-    subline: "Hourly breakdowns and full detail — unlocked.",
-    confirmationBody: "Hourly breakdowns and full detail are ready on your Progress page.",
-  },
-  [PAYWALL_ENTRY.SESSION_TIME_LIMIT]: {
-    headline: "Your session hit the 1-hour free limit.",
-    subline: "Pro sessions run as long as you need.",
-    confirmationBody: "Pro sessions run as long as you need — start a new one anytime.",
-  },
+const getHeadlineCopy = (
+  entry: PAYWALL_ENTRY,
+  limits: IPlanLimits,
+): { headline: string; subline: string; confirmationBody: string } => {
+  switch (entry) {
+    case PAYWALL_ENTRY.SESSION_CAP:
+      return {
+        headline:
+          limits.dailySessionCap !== null
+            ? `You've used your ${limits.dailySessionCap} free sessions today.`
+            : "You've used today's free sessions.",
+        subline: "Pro removes the daily cap — start as many sessions as you need.",
+        confirmationBody: "The daily cap is gone — go as long as you need.",
+      };
+    case PAYWALL_ENTRY.ANALYTICS:
+      return {
+        headline: "Advanced analytics is part of Pro.",
+        subline: "Hourly breakdowns and full detail — unlocked.",
+        confirmationBody: "Hourly breakdowns and full detail are ready on your Progress page.",
+      };
+    case PAYWALL_ENTRY.SESSION_TIME_LIMIT:
+      return {
+        headline:
+          limits.sessionDurationCapSeconds !== null
+            ? `Your session hit the ${formatDurationCap(limits.sessionDurationCapSeconds)} free limit.`
+            : "Your session hit the free time limit.",
+        subline: "Pro sessions run as long as you need.",
+        confirmationBody: "Pro sessions run as long as you need — start a new one anytime.",
+      };
+  }
 };
 
-const COMPARISON_ROWS: { label: string; free: string; pro: string }[] = [
-  { label: "Sessions per day", free: `${FREE_TIER_DAILY_SESSION_CAP}`, pro: "Unlimited" },
-  { label: "Session length", free: "1 hour", pro: "Unlimited" },
+const getComparisonRows = (limits: IPlanLimits): { label: string; free: string; pro: string }[] => [
+  {
+    label: "Sessions per day",
+    free: limits.dailySessionCap !== null ? `${limits.dailySessionCap}` : "—",
+    pro: "Unlimited",
+  },
+  {
+    label: "Session length",
+    free: limits.sessionDurationCapSeconds !== null ? formatDurationCap(limits.sessionDurationCapSeconds) : "—",
+    pro: "Unlimited",
+  },
   { label: "Dashboard detail", free: "Daily & weekly", pro: "Full hourly & app-level" },
 ];
 
@@ -58,7 +82,7 @@ const resumeTriggeringContext = (entry: PAYWALL_ENTRY, missionId: string | null)
 export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
   const colors = useColors();
   const styles = createStyles(colors);
-  const { refresh: refreshEntitlement } = useEntitlement();
+  const { limits, refresh: refreshEntitlement } = useEntitlement();
 
   const [state, setState] = useState<PageState>("default");
   const [proPackage, setProPackage] = useState<PurchasesPackage | null>(null);
@@ -68,7 +92,8 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
     getProPackage().then(setProPackage);
   }, []);
 
-  const copy = HEADLINE_COPY[entry];
+  const copy = getHeadlineCopy(entry, limits);
+  const comparisonRows = getComparisonRows(limits);
   const priceLabel = proPackage
     ? `${proPackage.product.priceString}/month · billed monthly · cancel anytime`
     : FALLBACK_PRO_PRICE_LABEL;
@@ -143,7 +168,7 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
                 <Text style={styles.comparisonHeaderValue}>Free</Text>
                 <Text style={styles.comparisonHeaderValue}>Pro</Text>
               </View>
-              {COMPARISON_ROWS.map((row) => (
+              {comparisonRows.map((row) => (
                 <View key={row.label} style={styles.comparisonRow}>
                   <Text style={styles.comparisonLabel}>{row.label}</Text>
                   <Text style={styles.comparisonFreeValue}>{row.free}</Text>

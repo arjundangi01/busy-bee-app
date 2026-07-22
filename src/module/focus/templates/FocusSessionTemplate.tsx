@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -15,6 +15,7 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useMission } from "@/module/missions/hooks/useMission";
 import { useFocusSession } from "@/module/focus/hooks/useFocusSession";
 import { FOCUS_SESSION_ERROR_CODE } from "@/module/focus/utils/enums";
+import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
 import { wasPaywallDismissedToday } from "@/module/subscription/utils/dismissal";
 import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
 import { routes } from "@/config/routes";
@@ -41,12 +42,15 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
   const styles = createStyles(colors);
   const { mission, completeTask, completingTaskId } = useMission(missionId);
   const { start, end } = useFocusSession();
+  const { limits } = useEntitlement();
+  const sessionDurationCapSeconds = limits.sessionDurationCapSeconds;
 
   const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [stepComplete, setStepComplete] = useState(false);
   const [exitOverlayOpen, setExitOverlayOpen] = useState(false);
   const [stepsCompleted, setStepsCompleted] = useState(0);
+  const timeLimitHandledRef = useRef(false);
 
   useEffect(() => {
     start(missionId)
@@ -70,6 +74,20 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
     const interval = setInterval(() => setElapsedSeconds((prev) => prev + 1), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    // sessionDurationCapSeconds is null for both Pro (genuinely unlimited)
+    // and the brief window before entitlement data loads — either way there's
+    // nothing to enforce yet, and real elapsed time never approaches a real
+    // cap within that short loading window.
+    if (sessionDurationCapSeconds === null || !focusSessionId || timeLimitHandledRef.current) return;
+    if (elapsedSeconds < sessionDurationCapSeconds) return;
+
+    timeLimitHandledRef.current = true;
+    end({ focusSessionId, sessionEndReason: SESSION_END_REASON.TIME_LIMIT_REACHED }).then(() => {
+      router.replace({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.SESSION_TIME_LIMIT } });
+    });
+  }, [sessionDurationCapSeconds, focusSessionId, elapsedSeconds, end]);
 
   const currentTask = mission?.nextTask ?? null;
   const totalSteps = mission?.tasks.length ?? 0;
@@ -113,7 +131,11 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <View style={styles.header}>
-        <Text style={styles.elapsed}>{formatElapsed(elapsedSeconds)} elapsed</Text>
+        <Text style={styles.elapsed}>
+          {sessionDurationCapSeconds === null
+            ? `${formatElapsed(elapsedSeconds)} elapsed`
+            : `${formatElapsed(Math.max(sessionDurationCapSeconds - elapsedSeconds, 0))} remaining`}
+        </Text>
       </View>
 
       <View style={styles.blockedBadge}>

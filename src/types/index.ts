@@ -86,11 +86,17 @@ export type IFocusWindow = {
   endHour: number;
 };
 
+export type IPlanLimits = {
+  dailySessionCap: number | null;
+  sessionDurationCapSeconds: number | null;
+};
+
 export type ISubscriptionStatus = {
   isPro: boolean;
   status: SUBSCRIPTION_STATUS | null;
   expiresAt: string | null;
   productId: string | null;
+  limits: IPlanLimits;
 };
 
 export type IProgress = {
