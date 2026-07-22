@@ -40,6 +40,11 @@ export type IMission = {
   nextTask: IMissionTask | null;
 };
 
+export type IMissionPlan = {
+  nextStep: string;
+  remainingSteps: string[];
+};
+
 export type IOnboardingResult = {
   profile: {
     goal: GOAL;
