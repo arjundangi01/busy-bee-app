@@ -14,7 +14,11 @@ import { StatCard } from "@/components/content/StatCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useMission } from "@/module/missions/hooks/useMission";
 import { useFocusSession } from "@/module/focus/hooks/useFocusSession";
+import { FOCUS_SESSION_ERROR_CODE } from "@/module/focus/utils/enums";
+import { wasPaywallDismissedToday } from "@/module/subscription/utils/dismissal";
+import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
 import { routes } from "@/config/routes";
+import { getErrorCode } from "@/lib/utils/errors";
 import { IColorTokens, spacing, useColors } from "@/theme";
 import { SESSION_END_REASON, TASK_STATUS } from "@/utils/enums";
 
@@ -45,7 +49,20 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
   const [stepsCompleted, setStepsCompleted] = useState(0);
 
   useEffect(() => {
-    start(missionId).then((session) => setFocusSessionId(session.id));
+    start(missionId)
+      .then((session) => setFocusSessionId(session.id))
+      .catch(async (error) => {
+        const code = getErrorCode(error);
+
+        if (code === FOCUS_SESSION_ERROR_CODE.SESSION_CAP_REACHED) {
+          const alreadyDismissedToday = await wasPaywallDismissedToday();
+          if (!alreadyDismissedToday) {
+            router.replace({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.SESSION_CAP, missionId } });
+            return;
+          }
+        }
+        router.replace(routes.tabs.home());
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [missionId]);
 
