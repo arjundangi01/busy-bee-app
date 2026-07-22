@@ -1,10 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { getErrorMessage } from "@/lib/utils/errors";
 import { IApiResponse, IFocusSession } from "@/types";
 import { SESSION_END_REASON } from "@/utils/enums";
 
 export function useFocusSession() {
+  const queryClient = useQueryClient();
+
   const startMutation = useMutation({
     mutationKey: ["focus-sessions", "start"],
     mutationFn: async (missionId: string) => {
@@ -27,6 +29,9 @@ export function useFocusSession() {
         { sessionEndReason },
       );
       return response.data.data as IFocusSession;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 

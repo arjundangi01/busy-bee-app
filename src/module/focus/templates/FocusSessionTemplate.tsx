@@ -57,7 +57,7 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
   const currentTask = mission?.nextTask ?? null;
   const totalSteps = mission?.tasks.length ?? 0;
 
-  const goToSessionComplete = (completedCount: number) => {
+  const goToSessionComplete = (completedCount: number, distractionsBlocked: number) => {
     router.replace({
       pathname: "/mission/[id]/complete",
       params: {
@@ -65,6 +65,7 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
         timeFocused: String(Math.round(elapsedSeconds / 60)),
         stepsCompleted: String(completedCount),
         totalSteps: String(totalSteps),
+        distractionsBlocked: String(distractionsBlocked),
       },
     });
   };
@@ -82,8 +83,8 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
       return;
     }
 
-    await end({ focusSessionId, sessionEndReason: SESSION_END_REASON.MISSION_COMPLETED });
-    goToSessionComplete(newStepsCompleted);
+    const session = await end({ focusSessionId, sessionEndReason: SESSION_END_REASON.MISSION_COMPLETED });
+    goToSessionComplete(newStepsCompleted, session.blockedAttemptCount);
   };
 
   const handleEarlyExit = async () => {
