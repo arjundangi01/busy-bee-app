@@ -26,7 +26,13 @@ export function TopBar(props: TopBarProps) {
       <Text style={styles.wordmark}>
         busy<Text style={{ color: colors.accent }}>bee</Text>
       </Text>
-      <Pressable onPress={props.onAvatarPress} hitSlop={12} style={styles.avatar}>
+      <Pressable
+        onPress={props.onAvatarPress}
+        hitSlop={12}
+        style={styles.avatar}
+        accessibilityRole="button"
+        accessibilityLabel="Settings and account"
+      >
         <Text style={styles.avatarGlyph}>◍</Text>
       </Pressable>
     </View>

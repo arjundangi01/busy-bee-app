@@ -31,6 +31,9 @@ export function PrimaryButton({ label, onPress, disabled, loading }: PrimaryButt
         scale.value = withTiming(1, { duration: 150 });
       }}
       style={[styles.button, animatedStyle, isInactive && styles.buttonInactive]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: isInactive, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator color={colors.invertText} />

@@ -162,7 +162,7 @@ const createStyles = (colors: IColorTokens) =>
       fontWeight: "700",
     },
     helper: {
-      color: colors.textFaint,
+      color: colors.textSecondary,
       fontSize: 12,
     },
     thinkingSection: {
@@ -190,11 +190,11 @@ const createStyles = (colors: IColorTokens) =>
       gap: spacing.lg,
     },
     resultTitle: {
-      color: colors.textMuted,
+      color: colors.textSecondary,
       fontSize: 12,
     },
     stepEyebrow: {
-      color: colors.textMuted,
+      color: colors.textSecondary,
       fontSize: 11,
       fontWeight: "600",
       textTransform: "uppercase",

@@ -12,7 +12,7 @@ export default function TabsLayout() {
         // Tab bar active state is monochrome per DS-004 — color-accent is
         // reserved for the wordmark, Companion, and streak stat only.
         tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: colors.textFaint,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.borderSubtle,

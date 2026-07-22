@@ -57,15 +57,19 @@ export function HomeTemplate() {
             </View>
 
             <View style={styles.statRow}>
-              <View style={styles.statTile}>
+              <View style={styles.statTile} accessible accessibilityLabel={`${dashboard.streakDays} day streak`}>
                 <Text style={[styles.statValue, styles.statValueAccent]}>{dashboard.streakDays}</Text>
                 <Text style={styles.statLabel}>Day Streak</Text>
               </View>
-              <View style={styles.statTile}>
+              <View style={styles.statTile} accessible accessibilityLabel={`${dashboard.backlogCount} backlog`}>
                 <Text style={styles.statValue}>{dashboard.backlogCount}</Text>
                 <Text style={styles.statLabel}>Backlog</Text>
               </View>
-              <View style={styles.statTile}>
+              <View
+                style={styles.statTile}
+                accessible
+                accessibilityLabel={`${formatReclaimed(dashboard.timeReclaimedMinutes)} reclaimed`}
+              >
                 <Text style={styles.statValue}>{formatReclaimed(dashboard.timeReclaimedMinutes)}</Text>
                 <Text style={styles.statLabel}>Reclaimed</Text>
               </View>
@@ -158,7 +162,7 @@ const createStyles = (colors: IColorTokens) =>
       color: colors.accent,
     },
     statLabel: {
-      color: colors.textMuted,
+      color: colors.textSecondary,
       fontSize: 10,
       fontWeight: "600",
       textTransform: "uppercase",
@@ -193,7 +197,7 @@ const createStyles = (colors: IColorTokens) =>
       borderColor: colors.text,
     },
     trendDayLabel: {
-      color: colors.textFaint,
+      color: colors.textSecondary,
       fontSize: 9,
     },
     todayHeadline: {
@@ -208,7 +212,7 @@ const createStyles = (colors: IColorTokens) =>
       fontVariant: ["tabular-nums"],
     },
     signal: {
-      color: colors.textMuted,
+      color: colors.textSecondary,
       fontSize: 11,
     },
     ctaWrapper: {

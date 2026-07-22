@@ -200,7 +200,7 @@ const createStyles = (colors: IColorTokens) =>
       backgroundColor: colors.border,
     },
     dividerLabel: {
-      color: colors.textMuted,
+      color: colors.textSecondary,
       fontSize: 10,
       fontWeight: "600",
       textTransform: "uppercase",
@@ -210,7 +210,7 @@ const createStyles = (colors: IColorTokens) =>
       marginTop: spacing.sm,
     },
     helper: {
-      color: colors.textFaint,
+      color: colors.textSecondary,
       fontSize: 11,
     },
     error: {

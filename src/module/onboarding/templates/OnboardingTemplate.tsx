@@ -173,7 +173,7 @@ const createStyles = (colors: IColorTokens) =>
       lineHeight: 19,
     },
     ceilingNote: {
-      color: colors.textFaint,
+      color: colors.textSecondary,
       fontSize: 11,
       textAlign: "center",
     },

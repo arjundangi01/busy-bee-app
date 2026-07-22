@@ -10,7 +10,13 @@ export function BackButton({ onPress }: BackButtonProps) {
   const styles = createStyles(colors);
 
   return (
-    <Pressable onPress={onPress} style={styles.button} hitSlop={12}>
+    <Pressable
+      onPress={onPress}
+      style={styles.button}
+      hitSlop={12}
+      accessibilityRole="button"
+      accessibilityLabel="Go back"
+    >
       <Text style={styles.arrow}>←</Text>
     </Pressable>
   );
