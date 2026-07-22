@@ -27,17 +27,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="missions"
+        name="progress"
         options={{
-          title: "Missions",
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>☰</Text>,
+          title: "Progress",
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◷</Text>,
         }}
       />
       <Tabs.Screen
-        name="focus"
+        name="settings"
         options={{
-          title: "Focus",
-          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◷</Text>,
+          title: "Settings",
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>☰</Text>,
         }}
       />
     </Tabs>

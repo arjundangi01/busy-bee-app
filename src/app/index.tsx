@@ -1,12 +1,26 @@
-import { StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { Redirect } from "expo-router";
+import { routes } from "@/config/routes";
+import { useAuthStore } from "@/store/auth-store";
+import { useColors } from "@/theme";
 
 export default function Index() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>AI Mission Control</Text>
-      <Text style={styles.subtitle}>What&apos;s the next smallest thing you should do?</Text>
-    </View>
-  );
+  const { isBootstrapping, user } = useAuthStore();
+  const colors = useColors();
+
+  if (isBootstrapping) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return <Redirect href={routes.onboarding.welcome()} />;
+  }
+
+  return <Redirect href={routes.tabs.home()} />;
 }
 
 const styles = StyleSheet.create({
@@ -14,16 +28,5 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    padding: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "600",
-  },
-  subtitle: {
-    fontSize: 14,
-    opacity: 0.6,
-    textAlign: "center",
   },
 });

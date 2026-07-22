@@ -15,7 +15,6 @@ export type IUser = {
 export type IAuthResult = {
   user: IUser;
   token: string;
-  hasProfile: boolean;
 };
 
 export type IOnboardingInsight = {
