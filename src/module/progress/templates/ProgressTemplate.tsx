@@ -1,4 +1,4 @@
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LabelValueRow } from "@/components/content/LabelValueRow";
@@ -9,6 +9,8 @@ import { Sparkline } from "@/module/progress/components/Sparkline";
 import { StreakCalendar } from "@/module/progress/components/StreakCalendar";
 import { WeeklyBarChart } from "@/module/progress/components/WeeklyBarChart";
 import { useProgress } from "@/module/progress/hooks/useProgress";
+import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
+import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
 import { routes } from "@/config/routes";
 import { formatMinutesAsHoursAndMinutes } from "@/lib/utils/format";
 import { IColorTokens, spacing, useColors } from "@/theme";
@@ -26,6 +28,7 @@ export function ProgressTemplate() {
   const colors = useColors();
   const styles = createStyles(colors);
   const { progress, isLoading, isRefetching, error, refresh } = useProgress();
+  const { isPro } = useEntitlement();
 
   if (isLoading && !progress) {
     return (
@@ -106,15 +109,25 @@ export function ProgressTemplate() {
           <LabelValueRow label="Distraction attempts" value={`${progress.distractionAttemptsThisWeek} this week`} />
         </StatCard>
 
-        <View style={styles.teaser}>
-          <Text style={styles.teaserIcon}>🔒</Text>
-          <View style={styles.teaserCopy}>
-            <Text style={styles.teaserHeadline}>Advanced analytics</Text>
-            <Text style={styles.teaserBody}>
-              Hourly breakdowns, distraction-app detail, and coaching insights with Pro.
-            </Text>
-          </View>
-        </View>
+        {!isPro && (
+          <Pressable
+            onPress={() => router.push({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.ANALYTICS } })}
+            style={styles.lockedPanel}
+            accessibilityRole="button"
+            accessibilityLabel="Locked. Advanced analytics is a Pro feature."
+          >
+            <View style={styles.lockedPreview} importantForAccessibility="no-hide-descendants">
+              <View style={[styles.lockedBar, { width: "78%" }]} />
+              <View style={[styles.lockedBar, { width: "52%" }]} />
+              <View style={[styles.lockedBar, { width: "64%" }]} />
+            </View>
+            <View style={styles.lockedOverlay}>
+              <Text style={styles.lockedIcon}>🔒</Text>
+              <Text style={styles.lockedHeadline}>Advanced analytics</Text>
+              <Text style={styles.lockedBody}>Hourly breakdowns and full detail — unlock with Pro</Text>
+            </View>
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -197,31 +210,47 @@ const createStyles = (colors: IColorTokens) =>
       fontWeight: "700",
       fontVariant: ["tabular-nums"],
     },
-    teaser: {
-      flexDirection: "row",
-      gap: spacing.md,
-      padding: spacing.lg,
+    lockedPanel: {
       borderWidth: 1,
-      borderStyle: "dashed",
       borderColor: colors.border,
       borderRadius: 20,
+      overflow: "hidden",
+      minHeight: 96,
     },
-    teaserIcon: {
+    lockedPreview: {
+      padding: spacing.lg,
+      gap: spacing.sm,
+    },
+    lockedBar: {
+      height: 10,
+      borderRadius: 999,
+      backgroundColor: colors.surfaceAlt,
+    },
+    lockedOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.bg + "cc",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.xxs,
+      paddingHorizontal: spacing.lg,
+    },
+    lockedIcon: {
       fontSize: 18,
     },
-    teaserCopy: {
-      flex: 1,
-      gap: spacing.xxxs,
-    },
-    teaserHeadline: {
+    lockedHeadline: {
       color: colors.text,
       fontSize: 13,
       fontWeight: "600",
     },
-    teaserBody: {
+    lockedBody: {
       color: colors.textSecondary,
       fontSize: 11,
       lineHeight: 15,
+      textAlign: "center",
     },
     errorText: {
       color: colors.danger,
