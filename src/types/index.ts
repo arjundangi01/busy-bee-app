@@ -1,4 +1,4 @@
-import { MISSION_STATUS, SESSION_END_REASON, TASK_STATUS } from "@/utils/enums";
+import { MISSION_STATUS, SESSION_END_REASON, SUBSCRIPTION_STATUS, TASK_STATUS } from "@/utils/enums";
 
 export type IApiResponse<T> = {
   success: boolean;
@@ -84,6 +84,13 @@ export type IStreakCalendarCell = {
 export type IFocusWindow = {
   startHour: number;
   endHour: number;
+};
+
+export type ISubscriptionStatus = {
+  isPro: boolean;
+  status: SUBSCRIPTION_STATUS | null;
+  expiresAt: string | null;
+  productId: string | null;
 };
 
 export type IProgress = {
