@@ -24,7 +24,9 @@ export default function RootLayout() {
               animation: "fade",
               contentStyle: { backgroundColor: colors.bg },
             }}
-          />
+          >
+            <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
+          </Stack>
         </OnboardingPermissionsProvider>
       </AuthProvider>
     </QueryClientProvider>

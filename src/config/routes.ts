@@ -12,6 +12,7 @@ export const routes = {
     settings: (): "/settings" => "/settings",
   },
   eveningReview: (): "/evening-review" => "/evening-review",
+  paywall: (): "/paywall" => "/paywall",
   startMission: (): "/mission/new" => "/mission/new",
   mission: (id: string) => `/mission/${id}` as const,
   focusSession: (id: string) => `/mission/${id}/focus` as const,

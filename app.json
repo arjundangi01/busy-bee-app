@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "AI Mission Control",
-    "slug": "ai-mission-control",
+    "slug": "busy-bee",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -39,6 +39,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "afce5f9c-f889-43e4-bdb7-5839f1265b92"
+      }
+    },
+    "owner": "eonpix"
   }
 }
