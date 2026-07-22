@@ -34,6 +34,6 @@ const createStyles = (colors: IColorTokens) =>
       backgroundColor: colors.textFaint,
     },
     dotActive: {
-      backgroundColor: colors.accent,
+      backgroundColor: colors.text,
     },
   });

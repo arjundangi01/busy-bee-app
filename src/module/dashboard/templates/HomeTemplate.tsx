@@ -27,7 +27,7 @@ export function HomeTemplate() {
   if (isLoading && !dashboard) {
     return (
       <SafeAreaView style={styles.centeredSafeArea}>
-        <ActivityIndicator color={colors.accent} />
+        <ActivityIndicator color={colors.text} />
       </SafeAreaView>
     );
   }
@@ -48,7 +48,7 @@ export function HomeTemplate() {
       <TopBar variant="tab-root" onAvatarPress={() => router.push(routes.tabs.settings())} />
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl tintColor={colors.accent} refreshing={isRefetching} onRefresh={refresh} />}
+        refreshControl={<RefreshControl tintColor={colors.text} refreshing={isRefetching} onRefresh={refresh} />}
       >
         {dashboard && (
           <Animated.View entering={FadeIn.duration(400)} style={styles.body}>

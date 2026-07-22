@@ -11,7 +11,7 @@ export default function Index() {
   if (isBootstrapping) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bg }]}>
-        <ActivityIndicator color={colors.accent} />
+        <ActivityIndicator color={colors.text} />
       </View>
     );
   }
