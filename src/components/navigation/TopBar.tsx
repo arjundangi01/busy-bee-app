@@ -5,7 +5,7 @@ import { IColorTokens, spacing, useColors } from "@/theme";
 // design-artifacts/D-Design-System/components/navigation/01-top-bar.md
 type TopBarProps =
   | { variant: "tab-root"; onAvatarPress: () => void }
-  | { variant: "sub-screen"; title?: string; onBack: () => void };
+  | { variant: "sub-screen"; title?: string; trailingDate?: string; onBack: () => void };
 
 export function TopBar(props: TopBarProps) {
   const colors = useColors();
@@ -16,7 +16,11 @@ export function TopBar(props: TopBarProps) {
       <View style={styles.row}>
         <BackButton onPress={props.onBack} />
         {props.title && <Text style={styles.title}>{props.title}</Text>}
-        <View style={styles.backSpacer} />
+        {props.trailingDate ? (
+          <Text style={styles.trailingDate}>{props.trailingDate}</Text>
+        ) : (
+          <View style={styles.backSpacer} />
+        )}
       </View>
     );
   }
@@ -69,6 +73,11 @@ const createStyles = (colors: IColorTokens) =>
       color: colors.text,
       fontSize: 16,
       fontWeight: "600",
+    },
+    trailingDate: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontVariant: ["tabular-nums"],
     },
     backSpacer: {
       width: 44,
