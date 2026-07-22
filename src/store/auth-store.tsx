@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { apiClient } from "@/lib/api";
+import { loginToPurchases, logoutOfPurchases } from "@/lib/purchases";
 import { clearStoredToken, getStoredToken, setStoredToken } from "@/lib/utils/session";
 import { IApiResponse, IAuthResult, IUser } from "@/types";
 
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const result = response.data.data;
         if (result) {
           setUser(result.user);
+          await loginToPurchases(result.user.id);
         }
       } catch {
         await clearStoredToken();
@@ -43,11 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setSession = async (result: IAuthResult): Promise<void> => {
     await setStoredToken(result.token);
     setUser(result.user);
+    await loginToPurchases(result.user.id);
   };
 
   const signOut = async (): Promise<void> => {
     await clearStoredToken();
     setUser(null);
+    await logoutOfPurchases();
   };
 
   const value = useMemo<AuthStoreValue>(
