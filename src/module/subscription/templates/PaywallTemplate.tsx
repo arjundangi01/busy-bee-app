@@ -169,10 +169,21 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
                 <Text style={styles.comparisonHeaderValue}>Pro</Text>
               </View>
               {comparisonRows.map((row) => (
-                <View key={row.label} style={styles.comparisonRow}>
-                  <Text style={styles.comparisonLabel}>{row.label}</Text>
-                  <Text style={styles.comparisonFreeValue}>{row.free}</Text>
-                  <Text style={styles.comparisonProValue}>{row.pro}</Text>
+                <View
+                  key={row.label}
+                  style={styles.comparisonRow}
+                  accessible
+                  accessibilityLabel={`${row.label}: Free ${row.free}, Pro ${row.pro}`}
+                >
+                  <Text style={styles.comparisonLabel} importantForAccessibility="no-hide-descendants">
+                    {row.label}
+                  </Text>
+                  <Text style={styles.comparisonFreeValue} importantForAccessibility="no-hide-descendants">
+                    {row.free}
+                  </Text>
+                  <Text style={styles.comparisonProValue} importantForAccessibility="no-hide-descendants">
+                    {row.pro}
+                  </Text>
                 </View>
               ))}
             </View>
