@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { queryClient } from "@/lib/query-client";
+import { configureGoogleSignIn } from "@/lib/googleAuth";
 import { initPurchases } from "@/lib/purchases";
 import { OnboardingPermissionsProvider } from "@/module/onboarding/context/OnboardingPermissionsContext";
 import { AuthProvider } from "@/store/auth-store";
@@ -12,6 +13,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     initPurchases();
+    configureGoogleSignIn();
   }, []);
 
   return (

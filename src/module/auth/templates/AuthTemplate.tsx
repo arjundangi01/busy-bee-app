@@ -6,6 +6,7 @@ import { Companion } from "@/components/content/Companion";
 import { BackButton } from "@/components/ui/BackButton";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { TextField } from "@/components/ui/TextField";
+import { useGoogleAuth } from "@/module/auth/hooks/useGoogleAuth";
 import { useSignIn } from "@/module/auth/hooks/useSignIn";
 import { useSignUp } from "@/module/auth/hooks/useSignUp";
 import { useOnboardingPermissions } from "@/module/onboarding/context/OnboardingPermissionsContext";
@@ -30,6 +31,7 @@ export function AuthTemplate({ initialMode }: AuthTemplateProps) {
 
   const signUp = useSignUp();
   const signIn = useSignIn();
+  const googleAuth = useGoogleAuth();
   const { permissions } = useOnboardingPermissions();
 
   const isSignUp = mode === "sign-up";
@@ -52,6 +54,16 @@ export function AuthTemplate({ initialMode }: AuthTemplateProps) {
       await signIn.submit({ email: email.trim(), password });
     }
     router.replace(routes.tabs.home());
+  };
+
+  const handleGoogleAuth = async () => {
+    const result = await googleAuth.submit({
+      backgroundExecutionGranted: permissions.backgroundExecutionGranted,
+      notificationsGranted: permissions.notificationsGranted,
+    });
+    if (result) {
+      router.replace(routes.tabs.home());
+    }
   };
 
   const toggleMode = () => {
@@ -87,10 +99,19 @@ export function AuthTemplate({ initialMode }: AuthTemplateProps) {
           <View style={styles.socialButton}>
             <Text style={styles.socialLabel}>Continue with Apple</Text>
           </View>
-          <View style={styles.socialButton}>
-            <Text style={styles.socialLabel}>Continue with Google</Text>
-          </View>
+          <Pressable
+            onPress={handleGoogleAuth}
+            disabled={googleAuth.isLoading}
+            style={[styles.socialButton, styles.socialButtonActive]}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
+          >
+            <Text style={[styles.socialLabel, styles.socialLabelActive]}>
+              {googleAuth.isLoading ? "Continuing…" : "Continue with Google"}
+            </Text>
+          </Pressable>
         </View>
+        {googleAuth.error && <Text style={styles.error}>{googleAuth.error}</Text>}
 
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
@@ -183,10 +204,16 @@ const createStyles = (colors: IColorTokens) =>
       justifyContent: "center",
       opacity: 0.4,
     },
+    socialButtonActive: {
+      opacity: 1,
+    },
     socialLabel: {
       color: colors.textFaint,
       fontSize: 15,
       fontWeight: "600",
+    },
+    socialLabelActive: {
+      color: colors.text,
     },
     divider: {
       flexDirection: "row",

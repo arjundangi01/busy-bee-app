@@ -22,6 +22,17 @@ npx expo start --dev-client
 
 `EXPO_PUBLIC_REVENUECAT_IOS_KEY`/`EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` are optional — without them, `Purchases.configure()` is skipped (console warning) and the paywall's Upgrade button shows a friendly "not available yet" error instead of crashing. Real purchases need a RevenueCat account + App Store Connect/Google Play Console products registered first (see `design-artifacts/E-Development/DD-003-implementation-plan.md` Open Items).
 
+### Google sign-in setup
+
+Also needs a real Firebase project (a native dependency of `@react-native-firebase/*`, so it's part of the same dev-client build above, not optional at the JS level like the RevenueCat keys):
+
+1. Place `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) at this directory's root — `app.json`'s `android.googleServicesFile`/`ios.googleServicesFile` already point here
+2. Set `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` in `.env` — the **Web client ID** (not the iOS/Android one) from Firebase Console → Authentication → Sign-in method → Google
+3. Re-run `npx expo prebuild` and the `eas build` step above so the native config files are picked up
+4. The backend also needs `FIREBASE_SERVICE_ACCOUNT_JSON` set — see `backend/README.md`
+
+Without step 2, `GoogleSignin.configure()` is skipped (console warning) and "Continue with Google" shows a friendly error instead of crashing.
+
 ## Verify
 
 ```bash
