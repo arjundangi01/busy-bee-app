@@ -9,13 +9,12 @@ inventing one — don't copy a web-app pattern over just because the equivalent 
 ## Commands
 
 ```bash
-npx expo start        # start the dev server, then press i / a / w, or scan with Expo Go
-npm run ios            # start with the iOS simulator
-npm run android        # start with the Android emulator
-npm run web             # start in a browser
-npm run lint             # eslint (eslint-config-expo)
-npx tsc --noEmit        # typecheck
+npx expo start --dev-client   # start the dev server against a dev-client build (see below)
+npm run lint                   # eslint (eslint-config-expo)
+npx tsc --noEmit               # typecheck
 ```
+
+**This app can no longer run in plain Expo Go** as of DD-003 — `react-native-purchases` (RevenueCat SDK) has native code. `npx expo prebuild` + `eas build --profile development` produces an installable dev-client build; `npm run ios`/`npm run android`/`npm run web` (plain `expo start --ios`/etc.) will fail against native modules like this one until you're running through that dev-client, not Expo Go. See the root README's Run section for the full sequence.
 
 There is no test runner, no build script, and no pre-commit hook (husky/lint-staged/commitlint)
 configured yet — unlike the web app. Don't assume any of these exist; if the user asks to add

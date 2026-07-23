@@ -11,12 +11,16 @@ cp .env.example .env   # then point EXPO_PUBLIC_API_URL at the backend
 
 ## Run
 
+**This app can no longer run in plain Expo Go** — `react-native-purchases` (RevenueCat SDK, for the 4.1 Paywall) has native code, so it needs a custom development build:
+
 ```bash
-npx expo start     # then press i / a / w, or scan with Expo Go
-npm run ios
-npm run android
-npm run web
+npx expo prebuild        # generates native ios/android projects (one-time, or after native deps change)
+eas build --profile development --platform ios      # or --platform android
+# install the resulting dev-client build on a simulator/device, then:
+npx expo start --dev-client
 ```
+
+`EXPO_PUBLIC_REVENUECAT_IOS_KEY`/`EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` are optional — without them, `Purchases.configure()` is skipped (console warning) and the paywall's Upgrade button shows a friendly "not available yet" error instead of crashing. Real purchases need a RevenueCat account + App Store Connect/Google Play Console products registered first (see `design-artifacts/E-Development/DD-003-implementation-plan.md` Open Items).
 
 ## Verify
 
