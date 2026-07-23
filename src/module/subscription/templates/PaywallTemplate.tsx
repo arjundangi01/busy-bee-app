@@ -50,6 +50,12 @@ const getHeadlineCopy = (
         subline: "Pro sessions run as long as you need.",
         confirmationBody: "Pro sessions run as long as you need — start a new one anytime.",
       };
+    case PAYWALL_ENTRY.SETTINGS:
+      return {
+        headline: "Upgrade to Pro.",
+        subline: "Unlimited sessions, no time limit, full analytics detail.",
+        confirmationBody: "You're all set — Pro is active on your account.",
+      };
   }
 };
 
@@ -72,7 +78,7 @@ const resumeTriggeringContext = (entry: PAYWALL_ENTRY, missionId: string | null)
     router.replace(routes.focusSession(missionId));
     return;
   }
-  if (entry === PAYWALL_ENTRY.ANALYTICS) {
+  if (entry === PAYWALL_ENTRY.ANALYTICS || entry === PAYWALL_ENTRY.SETTINGS) {
     router.back();
     return;
   }
@@ -100,7 +106,7 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
 
   const handleDismiss = async () => {
     await markPaywallDismissedToday();
-    if (entry === PAYWALL_ENTRY.ANALYTICS) {
+    if (entry === PAYWALL_ENTRY.ANALYTICS || entry === PAYWALL_ENTRY.SETTINGS) {
       router.back();
       return;
     }

@@ -10,6 +10,10 @@ export type IUser = {
   id: string;
   name: string;
   email: string;
+  backgroundExecutionGranted: boolean | null;
+  notificationsGranted: boolean | null;
+  pushNotificationsEnabled: boolean;
+  eodNudgeEnabled: boolean;
 };
 
 export type IAuthResult = {

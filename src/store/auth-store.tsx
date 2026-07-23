@@ -8,6 +8,7 @@ type AuthStoreValue = {
   isBootstrapping: boolean;
   user: IUser | null;
   setSession: (result: IAuthResult) => Promise<void>;
+  updateUser: (user: IUser) => void;
   signOut: () => Promise<void>;
 };
 
@@ -55,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const value = useMemo<AuthStoreValue>(
-    () => ({ isBootstrapping, user, setSession, signOut }),
+    () => ({ isBootstrapping, user, setSession, updateUser: setUser, signOut }),
     [isBootstrapping, user],
   );
 
