@@ -40,6 +40,21 @@ export function useBlockingEnforcement({
   const sessionStartedRef = useRef(false);
   const lastStepTextRef = useRef<string | null>(null);
   const [distractedSinceUnit, setDistractedSinceUnit] = useState<number | null>(null);
+  // Read inside the AppState listener below instead of depending on the raw
+  // values directly — elapsedLabel/currentWorkUnit change every second while
+  // a session runs, and depending on them directly would tear down and
+  // resubscribe the global AppState listener every second too. Refs let the
+  // listener stay subscribed for the whole session while still reading
+  // current values when it actually fires. Updated via effects, never
+  // during render (mutating a ref mid-render breaks under React Compiler).
+  const elapsedLabelRef = useRef(elapsedLabel);
+  useEffect(() => {
+    elapsedLabelRef.current = elapsedLabel;
+  }, [elapsedLabel]);
+  const currentWorkUnitRef = useRef(currentWorkUnit);
+  useEffect(() => {
+    currentWorkUnitRef.current = currentWorkUnit;
+  }, [currentWorkUnit]);
   // Always true off-Android — enforcement was never promised there (see the
   // blocklist spec's frozen "Never touch iOS" boundary), so this warning
   // must never render on a platform where it wouldn't mean anything.
@@ -106,13 +121,13 @@ export function useBlockingEnforcement({
     // double-record the same attempt.
     const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
       if (nextState === "background") {
-        BlockingEnforcement.updateSessionNotification(elapsedLabel);
+        BlockingEnforcement.updateSessionNotification(elapsedLabelRef.current);
         return;
       }
       if (nextState === "active") {
         BlockingEnforcement.getPendingBlockedAttempt().then((pending) => {
           if (!pending) return;
-          setDistractedSinceUnit(currentWorkUnit);
+          setDistractedSinceUnit(currentWorkUnitRef.current);
           recordBlockedAttempt(focusSessionId).catch(() => {
             // Worth recording, never worth crashing an active session over
             // if the network call itself fails — the pending record is
@@ -124,7 +139,7 @@ export function useBlockingEnforcement({
     });
 
     return () => subscription.remove();
-  }, [focusSessionId, elapsedLabel, recordBlockedAttempt, currentWorkUnit]);
+  }, [focusSessionId, recordBlockedAttempt]);
 
   // Safety net alongside the explicit clearActiveSession() call at each real
   // session-end path in FocusSessionTemplate — covers the component

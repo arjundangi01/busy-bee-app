@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppState, AppStateStatus, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { StatCard } from "@/components/content/StatCard";
 import { useAuthStore } from "@/store/auth-store";
 import { IColorTokens, spacing, useColors } from "@/theme";
@@ -45,13 +45,24 @@ export function PermissionsSection() {
   const { user } = useAuthStore();
   // Never stored server-side (unlike the other two rows) — it can change any
   // time via system Settings, so a persisted value would go stale
-  // immediately. Checked live on mount instead, same as the mid-session
-  // banner in useBlockingEnforcement.
+  // immediately. Checked live, and re-checked on every foreground return —
+  // not just on mount — since the whole point of "Fix in Settings" here is
+  // that the user leaves this exact screen, grants it in system Settings,
+  // and comes right back; a mount-only check would still show it as off.
   const [isAccessibilityEnabled, setIsAccessibilityEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== "android") return;
-    BlockingEnforcement.isAccessibilityServiceEnabled().then(setIsAccessibilityEnabled);
+
+    const checkStatus = () => {
+      BlockingEnforcement.isAccessibilityServiceEnabled().then(setIsAccessibilityEnabled);
+    };
+
+    checkStatus();
+    const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
+      if (nextState === "active") checkStatus();
+    });
+    return () => subscription.remove();
   }, []);
 
   if (!user) return null;
