@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Android 13+ requires this to post any notification, including the
+         ongoing session notification this module manages. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+        <!--
+          BIND_ACCESSIBILITY_SERVICE on the <service> itself is what makes this
+          a real AccessibilityService the system will bind to — it is not a
+          normal runtime-requestable permission (no prompt exists for it), the
+          user must grant it via system Settings. See BlockingPrefs/the
+          Permission Priming spec for the walkthrough this requires.
+        -->
+        <service
+            android:name="expo.modules.blockingenforcement.BlockingAccessibilityService"
+            android:exported="false"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:label="@string/accessibility_service_label">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!--
+          singleTask + its own taskAffinity: opens as its own task so the back
+          button can never return the user to the blocked app underneath it.
+          excludeFromRecents keeps a stray "Blocked" task out of the recents
+          switcher after the user leaves it via the CTA. Not exported — only
+          ever launched from BlockingAccessibilityService within this app's
+          own process, never by another app.
+        -->
+        <activity
+            android:name="expo.modules.blockingenforcement.BlockedAppInterstitialActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:theme="@style/BlockedInterstitialTheme" />
+    </application>
+</manifest>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Mirrors the dark-theme tokens in mobile/src/theme/colors.ts ("Premium
+  Black & White" — see design-artifacts/D-Design-System/00-design-system.md
+  #colors). Hardcoded because this Activity is launched natively by the
+  AccessibilityService and may render before/without the RN JS runtime
+  having started, so it can't read theme.ts at runtime. Keep these in sync
+  manually if the design system's dark palette ever changes.
+-->
+<resources>
+    <color name="interstitial_bg">#000000</color>
+    <color name="interstitial_surface">#0c0c0c</color>
+    <color name="interstitial_text">#ffffff</color>
+    <color name="interstitial_text_secondary">#8a8a8a</color>
+    <color name="interstitial_accent">#d4a943</color>
+</resources>

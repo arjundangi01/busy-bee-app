@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_label">Busy Bee Focus Blocking</string>
+    <string name="accessibility_service_description">Lets Busy Bee notice when a distracting app you\'ve blocked is opened during an active focus session, so it can bring you back. It does not read anything on your screen.</string>
+
+    <string name="interstitial_headline">%1$s is blocked</string>
+    <string name="interstitial_headline_fallback_app">This app</string>
+    <string name="interstitial_subcopy_with_step">Your focus session is still running — %1$s</string>
+    <string name="interstitial_subcopy_no_step">Your focus session is still running.</string>
+    <string name="interstitial_cta">Back to Busy Bee</string>
+
+    <string name="notification_channel_name">Focus Session</string>
+    <string name="notification_channel_description">Shows while a Busy Bee focus session is active</string>
+    <string name="notification_title_elapsed">%1$s elapsed</string>
+    <string name="notification_body_step">Step: %1$s</string>
+</resources>

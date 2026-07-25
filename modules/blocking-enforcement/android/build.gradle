@@ -1,0 +1,24 @@
+apply plugin: 'com.android.library'
+apply plugin: 'expo-module-gradle-plugin'
+
+group = 'expo.modules.blockingenforcement'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.blockingenforcement"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+}
+
+dependencies {
+  // Needed for AppCompatActivity (interstitial) and NotificationCompat/
+  // NotificationManagerCompat (session notification) — not covered by
+  // expo-modules-core itself. React Native/Expo already pull in some
+  // version of both transitively; if Gradle resolves a conflicting version
+  // against the host app during the first real build, drop the explicit
+  // version here and let the app's own resolution win instead.
+  implementation "androidx.appcompat:appcompat:1.7.0"
+  implementation "androidx.core:core-ktx:1.13.1"
+}

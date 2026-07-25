@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/interstitial_bg"
+    android:gravity="center"
+    android:paddingHorizontal="32dp">
+
+    <!--
+      Placeholder for the Bee icon: a plain accent-colored circle, matching
+      Companion.tsx's own abstract radial-gradient circle (no literal bee
+      illustration exists as an asset anywhere in the app yet). Swap for a
+      real drawable in a content/asset pass — not blocking for this spec.
+    -->
+    <View
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:background="@drawable/interstitial_bee_placeholder"
+        android:layout_marginBottom="32dp" />
+
+    <TextView
+        android:id="@+id/interstitial_headline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/interstitial_text"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="12dp"
+        tools:text="Instagram is blocked" />
+
+    <TextView
+        android:id="@+id/interstitial_subcopy"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/interstitial_text_secondary"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:layout_marginBottom="48dp"
+        tools:text="Your focus session is still running — Step 2 of 4" />
+
+    <Button
+        android:id="@+id/interstitial_cta"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="@string/interstitial_cta"
+        android:textColor="@color/interstitial_bg"
+        android:textAllCaps="false"
+        android:textStyle="bold"
+        android:background="@drawable/interstitial_cta_background"
+        android:elevation="0dp" />
+
+</LinearLayout>

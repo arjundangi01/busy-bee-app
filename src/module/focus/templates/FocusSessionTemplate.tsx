@@ -9,12 +9,15 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import * as BlockingEnforcement from "../../../../modules/blocking-enforcement";
 import { Companion } from "@/components/content/Companion";
 import { StatCard } from "@/components/content/StatCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useMission } from "@/module/missions/hooks/useMission";
 import { useFocusSession } from "@/module/focus/hooks/useFocusSession";
+import { useBlockingEnforcement } from "@/module/focus/hooks/useBlockingEnforcement";
 import { FOCUS_SESSION_ERROR_CODE } from "@/module/focus/utils/enums";
+import { useBlocklist } from "@/module/settings/hooks/useBlocklist";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
 import { wasPaywallDismissedToday } from "@/module/subscription/utils/dismissal";
 import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
@@ -43,6 +46,7 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
   const { mission, completeTask, completingTaskId } = useMission(missionId);
   const { start, end } = useFocusSession();
   const { limits } = useEntitlement();
+  const { blockedApps } = useBlocklist();
   const sessionDurationCapSeconds = limits.sessionDurationCapSeconds;
 
   const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
@@ -51,6 +55,18 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
   const [exitOverlayOpen, setExitOverlayOpen] = useState(false);
   const [stepsCompleted, setStepsCompleted] = useState(0);
   const timeLimitHandledRef = useRef(false);
+
+  const currentTask = mission?.nextTask ?? null;
+  const totalSteps = mission?.tasks.length ?? 0;
+
+  const { isEnforcementActive } = useBlockingEnforcement({
+    focusSessionId,
+    missionId,
+    blockedPackageNames: blockedApps.map((app) => app.packageName),
+    currentStepText: currentTask?.title ?? "",
+    elapsedSeconds,
+    elapsedLabel: formatElapsed(elapsedSeconds),
+  });
 
   useEffect(() => {
     start(missionId)
@@ -85,12 +101,10 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
 
     timeLimitHandledRef.current = true;
     end({ focusSessionId, sessionEndReason: SESSION_END_REASON.TIME_LIMIT_REACHED }).then(() => {
+      BlockingEnforcement.clearActiveSession();
       router.replace({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.SESSION_TIME_LIMIT } });
     });
   }, [sessionDurationCapSeconds, focusSessionId, elapsedSeconds, end]);
-
-  const currentTask = mission?.nextTask ?? null;
-  const totalSteps = mission?.tasks.length ?? 0;
 
   const goToSessionComplete = (completedCount: number, distractionsBlocked: number) => {
     router.replace({
@@ -119,12 +133,14 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
     }
 
     const session = await end({ focusSessionId, sessionEndReason: SESSION_END_REASON.MISSION_COMPLETED });
+    BlockingEnforcement.clearActiveSession();
     goToSessionComplete(newStepsCompleted, session.blockedAttemptCount);
   };
 
   const handleEarlyExit = async () => {
     if (!focusSessionId) return;
     await end({ focusSessionId, sessionEndReason: SESSION_END_REASON.EARLY_EXIT });
+    BlockingEnforcement.clearActiveSession();
     router.replace(routes.tabs.home());
   };
 
@@ -141,6 +157,12 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
       <View style={styles.blockedBadge}>
         <Text style={styles.blockedBadgeLabel}>🔒 Distractions blocked</Text>
       </View>
+
+      {!isEnforcementActive && (
+        <Pressable onPress={() => BlockingEnforcement.openAccessibilitySettings()} style={styles.enforcementWarning}>
+          <Text style={styles.enforcementWarningText}>Blocking permission is off — tap to turn it back on</Text>
+        </Pressable>
+      )}
 
       <View style={styles.body}>
         {stepComplete ? (
@@ -267,6 +289,15 @@ const createStyles = (colors: IColorTokens) =>
       color: colors.textSecondary,
       fontSize: 12,
       fontWeight: "600",
+    },
+    enforcementWarning: {
+      alignSelf: "center",
+      marginTop: spacing.xs,
+    },
+    enforcementWarningText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      textDecorationLine: "underline",
     },
     body: {
       flex: 1,
