@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { PurchasesPackage } from "react-native-purchases";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
+import { useWorkTypes } from "@/module/focus/hooks/useWorkTypes";
 import { getProPackage, isPurchasesConfigured, purchasePackage } from "@/lib/purchases";
 import { markPaywallDismissedToday } from "@/module/subscription/utils/dismissal";
 import { FALLBACK_PRO_PRICE_LABEL } from "@/module/subscription/utils/constants";
@@ -56,6 +57,12 @@ const getHeadlineCopy = (
         subline: "Unlimited sessions, no time limit, full analytics detail.",
         confirmationBody: "You're all set — Pro is active on your account.",
       };
+    case PAYWALL_ENTRY.HIVE_WORK_TYPE:
+      return {
+        headline: "This work type is part of Pro.",
+        subline: "Pro unlocks Bee's full set of work types in the Hive.",
+        confirmationBody: "The full set is unlocked — pick it anytime from the Hive.",
+      };
     default:
       // entry comes from a route param, not a closed call site — an
       // unrecognized/missing value (bad deep link, stale navigation state)
@@ -86,7 +93,10 @@ const getBenefits = (limits: IPlanLimits): { title: string; description: string 
   },
 ];
 
-const getComparisonRows = (limits: IPlanLimits): { label: string; free: string; pro: string }[] => [
+const getComparisonRows = (
+  limits: IPlanLimits,
+  freeWorkTypeCount: number,
+): { label: string; free: string; pro: string }[] => [
   {
     label: "Sessions per day",
     free: limits.dailySessionCap !== null ? `${limits.dailySessionCap}` : "—",
@@ -98,6 +108,12 @@ const getComparisonRows = (limits: IPlanLimits): { label: string; free: string; 
     pro: "Unlimited",
   },
   { label: "Dashboard detail", free: "Daily & weekly", pro: "Full hourly & app-level" },
+  // Sourced from the real work-type registry (useWorkTypes), not a
+  // hardcoded string — see 07-paywall-worktype-gating.md's acceptance
+  // criteria. Pro's own count isn't shown since no Pro work type exists
+  // yet (content pass, deferred) — "Full set" avoids implying a specific
+  // number that would currently be misleadingly equal to Free's.
+  { label: "Bee's work types", free: `${freeWorkTypeCount} starters`, pro: "Full set" },
 ];
 
 const resumeTriggeringContext = (entry: PAYWALL_ENTRY, missionId: string | null) => {
@@ -105,7 +121,11 @@ const resumeTriggeringContext = (entry: PAYWALL_ENTRY, missionId: string | null)
     router.replace(routes.focusSession(missionId));
     return;
   }
-  if (entry === PAYWALL_ENTRY.ANALYTICS || entry === PAYWALL_ENTRY.SETTINGS) {
+  if (
+    entry === PAYWALL_ENTRY.ANALYTICS ||
+    entry === PAYWALL_ENTRY.SETTINGS ||
+    entry === PAYWALL_ENTRY.HIVE_WORK_TYPE
+  ) {
     router.back();
     return;
   }
@@ -116,6 +136,7 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
   const colors = useColors();
   const styles = createStyles(colors);
   const { limits, refresh: refreshEntitlement } = useEntitlement();
+  const { workTypes } = useWorkTypes();
 
   const [state, setState] = useState<PageState>("default");
   const [proPackage, setProPackage] = useState<PurchasesPackage | null>(null);
@@ -127,14 +148,19 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
 
   const copy = getHeadlineCopy(entry, limits);
   const benefits = getBenefits(limits);
-  const comparisonRows = getComparisonRows(limits);
+  const freeWorkTypeCount = workTypes.filter((workType) => workType.tier === "FREE").length;
+  const comparisonRows = getComparisonRows(limits, freeWorkTypeCount);
   const priceLabel = proPackage
     ? `${proPackage.product.priceString}/month · billed monthly · cancel anytime`
     : FALLBACK_PRO_PRICE_LABEL;
 
   const handleDismiss = async () => {
     await markPaywallDismissedToday();
-    if (entry === PAYWALL_ENTRY.ANALYTICS || entry === PAYWALL_ENTRY.SETTINGS) {
+    if (
+      entry === PAYWALL_ENTRY.ANALYTICS ||
+      entry === PAYWALL_ENTRY.SETTINGS ||
+      entry === PAYWALL_ENTRY.HIVE_WORK_TYPE
+    ) {
       router.back();
       return;
     }

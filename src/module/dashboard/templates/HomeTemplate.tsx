@@ -47,9 +47,14 @@ export function HomeTemplate() {
       >
         {dashboard && (
           <Animated.View entering={FadeIn.duration(400)} style={styles.body}>
-            <View style={styles.companionStrip}>
+            <Pressable
+              style={styles.companionStrip}
+              onPress={() => router.push(routes.beesHive())}
+              accessibilityRole="button"
+              accessibilityLabel="Open Bee's Hive"
+            >
               <Companion state="idle" caption="At rest — ready when you are." />
-            </View>
+            </Pressable>
 
             <View style={styles.statRow}>
               <View style={styles.statTile} accessible accessibilityLabel={`${dashboard.streakDays} day streak`}>

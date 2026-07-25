@@ -8,4 +8,9 @@ export enum PAYWALL_ENTRY {
   ANALYTICS = "analytics",
   SESSION_TIME_LIMIT = "sessionTimeLimit",
   SETTINGS = "settings",
+  // Bee's Hive — tapping a Pro-locked work type. See design-artifacts/
+  // evolution/specs/07-paywall-worktype-gating.md. Deliberately still no
+  // companion visuals anywhere on this page — only this entry's headline
+  // copy and the new comparison row reference work types at all.
+  HIVE_WORK_TYPE = "hiveWorkType",
 }

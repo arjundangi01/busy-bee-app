@@ -16,7 +16,9 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useMission } from "@/module/missions/hooks/useMission";
 import { useFocusSession } from "@/module/focus/hooks/useFocusSession";
 import { useBlockingEnforcement } from "@/module/focus/hooks/useBlockingEnforcement";
+import { useWorkTypes } from "@/module/focus/hooks/useWorkTypes";
 import { FOCUS_SESSION_ERROR_CODE } from "@/module/focus/utils/enums";
+import { computeCurrentWorkUnit } from "@/module/focus/utils/workProgress";
 import { useBlocklist } from "@/module/settings/hooks/useBlocklist";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
 import { wasPaywallDismissedToday } from "@/module/subscription/utils/dismissal";
@@ -47,9 +49,11 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
   const { start, end } = useFocusSession();
   const { limits } = useEntitlement();
   const { blockedApps } = useBlocklist();
+  const { workTypes } = useWorkTypes();
   const sessionDurationCapSeconds = limits.sessionDurationCapSeconds;
 
   const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
+  const [sessionWorkTypeId, setSessionWorkTypeId] = useState<string | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [stepComplete, setStepComplete] = useState(false);
   const [exitOverlayOpen, setExitOverlayOpen] = useState(false);
@@ -59,18 +63,29 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
   const currentTask = mission?.nextTask ?? null;
   const totalSteps = mission?.tasks.length ?? 0;
 
-  const { isEnforcementActive } = useBlockingEnforcement({
+  // The session's own server-assigned work type (not re-derived from user
+  // prefs client-side) — single source of truth, set once start() resolves.
+  const sessionWorkType = workTypes.find((workType) => workType.id === sessionWorkTypeId) ?? null;
+  const currentWorkUnit = sessionWorkType
+    ? computeCurrentWorkUnit(elapsedSeconds, sessionWorkType.totalUnits)
+    : 0;
+
+  const { isEnforcementActive, isDistracted } = useBlockingEnforcement({
     focusSessionId,
     missionId,
     blockedPackageNames: blockedApps.map((app) => app.packageName),
     currentStepText: currentTask?.title ?? "",
     elapsedSeconds,
     elapsedLabel: formatElapsed(elapsedSeconds),
+    currentWorkUnit,
   });
 
   useEffect(() => {
     start(missionId)
-      .then((session) => setFocusSessionId(session.id))
+      .then((session) => {
+        setFocusSessionId(session.id);
+        setSessionWorkTypeId(session.workTypeId);
+      })
       .catch(async (error) => {
         const code = getErrorCode(error);
 
@@ -182,7 +197,21 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
         )}
 
         <View style={styles.companionWrap}>
-          <Companion state="at-work" caption="Working on it too — right alongside you." />
+          <Companion
+            state={isDistracted ? "distracted" : "at-work"}
+            caption={
+              isDistracted
+                ? "Bee stopped working — that pulled focus."
+                : sessionWorkType
+                  ? `Filling in ${sessionWorkType.label.toLowerCase()} — right alongside you.`
+                  : "Working on it too — right alongside you."
+            }
+            workProgress={
+              sessionWorkType
+                ? { currentUnit: currentWorkUnit, totalUnits: sessionWorkType.totalUnits }
+                : undefined
+            }
+          />
         </View>
       </View>
 

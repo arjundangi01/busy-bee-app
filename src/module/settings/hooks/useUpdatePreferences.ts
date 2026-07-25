@@ -13,6 +13,8 @@ type IUpdatePreferencesPayload = {
   phone?: string;
   age?: number;
   bio?: string;
+  // Bee's Hive — same PATCH /auth/me endpoint handles the work-type pick too.
+  selectedWorkTypeId?: string;
 };
 
 export function useUpdatePreferences() {

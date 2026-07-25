@@ -19,11 +19,28 @@ export type IUser = {
   phone: string | null;
   age: number | null;
   bio: string | null;
+  selectedWorkTypeId: string | null;
 };
 
 export type IAuthResult = {
   user: IUser;
   token: string;
+};
+
+export type IWorkType = {
+  id: string;
+  key: string;
+  label: string;
+  tier: "FREE" | "PRO";
+  totalUnits: number;
+  locked: boolean;
+};
+
+export type IBankedWork = {
+  workTypeId: string;
+  key: string;
+  label: string;
+  totalUnitsCompleted: number;
 };
 
 export type IBlockedApp = {
@@ -64,6 +81,8 @@ export type IFocusSession = {
   elapsedSeconds: number | null;
   sessionEndReason: SESSION_END_REASON | null;
   blockedAttemptCount: number;
+  workTypeId: string | null;
+  workUnitsCompleted: number;
 };
 
 export type ITrendDayStatus = "hit" | "miss" | "today";

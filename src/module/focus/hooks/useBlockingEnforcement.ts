@@ -12,6 +12,13 @@ type UseBlockingEnforcementArgs = {
   currentStepText: string;
   elapsedSeconds: number;
   elapsedLabel: string;
+  // The work-unit index the Companion is currently rendering (see
+  // computeCurrentWorkUnit) — used only to derive when "distracted" should
+  // clear back to "at-work": the moment this advances past the unit a
+  // collision was recorded on, per 03-companion-work-types.md's "reverts on
+  // the next real progress tick" rule. No timer needed — it's a plain
+  // derived comparison against a value the caller already computes.
+  currentWorkUnit: number;
 };
 
 // Bridges FocusSessionTemplate's existing JS-side session state into the
@@ -27,10 +34,12 @@ export function useBlockingEnforcement({
   currentStepText,
   elapsedSeconds,
   elapsedLabel,
+  currentWorkUnit,
 }: UseBlockingEnforcementArgs) {
   const { recordBlockedAttempt } = useRecordBlockedAttempt();
   const sessionStartedRef = useRef(false);
   const lastStepTextRef = useRef<string | null>(null);
+  const [distractedSinceUnit, setDistractedSinceUnit] = useState<number | null>(null);
   // Always true off-Android — enforcement was never promised there (see the
   // blocklist spec's frozen "Never touch iOS" boundary), so this warning
   // must never render on a platform where it wouldn't mean anything.
@@ -103,6 +112,7 @@ export function useBlockingEnforcement({
       if (nextState === "active") {
         BlockingEnforcement.getPendingBlockedAttempt().then((pending) => {
           if (!pending) return;
+          setDistractedSinceUnit(currentWorkUnit);
           recordBlockedAttempt(focusSessionId).catch(() => {
             // Worth recording, never worth crashing an active session over
             // if the network call itself fails — the pending record is
@@ -114,7 +124,7 @@ export function useBlockingEnforcement({
     });
 
     return () => subscription.remove();
-  }, [focusSessionId, elapsedLabel, recordBlockedAttempt]);
+  }, [focusSessionId, elapsedLabel, recordBlockedAttempt, currentWorkUnit]);
 
   // Safety net alongside the explicit clearActiveSession() call at each real
   // session-end path in FocusSessionTemplate — covers the component
@@ -128,5 +138,7 @@ export function useBlockingEnforcement({
     };
   }, []);
 
-  return { isEnforcementActive };
+  const isDistracted = distractedSinceUnit !== null && distractedSinceUnit === currentWorkUnit;
+
+  return { isEnforcementActive, isDistracted };
 }
