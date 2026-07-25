@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "85621456499",
+    "project_id": "busy-bee-604b9",
+    "storage_bucket": "busy-bee-604b9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:85621456499:android:09b7b1fedb8e571bfd7406",
+        "android_client_info": {
+          "package_name": "com.busybee.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "85621456499-lubqgaualdnrfeclmrn46hrokr35t7b3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGD7zGaPW9SvAss_mOeWx6poljIDmasto"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "85621456499-lubqgaualdnrfeclmrn46hrokr35t7b3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "85621456499-6cu5i2hsn1q0juf9csb5om1bom7bmrsq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.busybee.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

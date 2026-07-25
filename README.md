@@ -47,3 +47,26 @@ npx tsc --noEmit
 - Path alias `@/*` → `src/*` is already configured in `tsconfig.json`.
 
 See `code-practice-fe.md` in this directory for the full FE convention doc (architecture, data fetching, state, forms, etc.) — the one at the project root targets the Next.js web app, not this Expo client.
+
+Build
+npx expo-doctor -> check 15 checks \_ delete android folder
+npx expo prebuild
+npx eas build --platform android --profile development
+cd android
+
+./gradlew assembleRelease
+Error -> When run ./gradlew commands -> SDK location not found. Define a valid SDK location with an ANDROID_HOME environment variable or by setting the sdk.dir path in your project's local properties file at
+
+Solution
+
+Open or create this file: /intellectica-mobile-v2/android/local.properties
+
+Add this line -> sdk.dir=/Users/apple/Library/Android/sdk
+
+method one - ./gradlew signingReport to get SHA1 method two - i. run eas credentials ii. select platform then select profile -> development -> you will see SHA1
+
+The Swift pod FirebaseAuth depends upon FirebaseAuthInterop, FirebaseAppCheckInterop, FirebaseCore, FirebaseCoreExtension, GoogleUtilities, and RecaptchaInterop, which do not define modules. To opt into those targets generating module maps (which is necessary to import them from Swift when building as static libraries), you may set use_modular_headers! globally in your Podfile, or specify :modular_headers => true for particular dependencies.
+
+Solution
+
+add line -> use_modular_headers! in /ios/profile after line -> platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'

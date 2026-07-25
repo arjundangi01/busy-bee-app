@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AI Mission Control",
+    "name": "Busy Bee",
     "slug": "busy-bee",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -51,6 +51,12 @@
         "projectId": "afce5f9c-f889-43e4-bdb7-5839f1265b92"
       }
     },
-    "owner": "eonpix"
+    "owner": "eonpix",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/afce5f9c-f889-43e4-bdb7-5839f1265b92"
+    }
   }
 }
