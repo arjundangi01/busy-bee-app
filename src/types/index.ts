@@ -14,6 +14,7 @@ export type IUser = {
   notificationsGranted: boolean | null;
   pushNotificationsEnabled: boolean;
   eodNudgeEnabled: boolean;
+  blocklistDefaultsSeeded: boolean;
   occupation: string | null;
   phone: string | null;
   age: number | null;
@@ -23,6 +24,13 @@ export type IUser = {
 export type IAuthResult = {
   user: IUser;
   token: string;
+};
+
+export type IBlockedApp = {
+  id: string;
+  packageName: string;
+  appName: string;
+  createdAt: string;
 };
 
 export type IMissionTask = {

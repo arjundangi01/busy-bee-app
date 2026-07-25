@@ -1,0 +1,9 @@
+{
+  "name": "installed-apps",
+  "version": "1.0.0",
+  "description": "Local Expo module — lists real, launchable installed Android apps for the blocklist screen.",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}

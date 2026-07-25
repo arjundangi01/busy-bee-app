@@ -5,11 +5,12 @@ import { queryClient } from "@/lib/query-client";
 import { configureGoogleSignIn } from "@/lib/googleAuth";
 import { initPurchases } from "@/lib/purchases";
 import { OnboardingPermissionsProvider } from "@/module/onboarding/context/OnboardingPermissionsContext";
-import { AuthProvider } from "@/store/auth-store";
+import { AuthProvider, useAuthStore } from "@/store/auth-store";
 import { ThemeProvider, useColors } from "@/theme";
 
 function RootNavigator() {
   const colors = useColors();
+  const { user } = useAuthStore();
 
   return (
     <Stack
@@ -19,7 +20,18 @@ function RootNavigator() {
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
+      {/* Guards gate entire route groups. When `user` flips, the losing
+          group unmounts so its history is gone too — that's what stops
+          "back" from re-entering onboarding/auth after sign-in, and what
+          makes sign-out fall straight through to the auth group. */}
+      <Stack.Protected guard={!user}>
+        <Stack.Screen name="(onboarding)" />
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+
+      <Stack.Protected guard={!!user}>
+        <Stack.Screen name="(app)" />
+      </Stack.Protected>
     </Stack>
   );
 }

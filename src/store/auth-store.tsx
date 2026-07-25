@@ -1,14 +1,19 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import { router } from "expo-router";
 import { apiClient } from "@/lib/api";
 import { loginToPurchases, logoutOfPurchases } from "@/lib/purchases";
 import { clearStoredToken, getStoredToken, setStoredToken } from "@/lib/utils/session";
+import { routes } from "@/config/routes";
 import { IApiResponse, IAuthResult, IUser } from "@/types";
 
 type AuthStoreValue = {
   isBootstrapping: boolean;
   user: IUser | null;
   setSession: (result: IAuthResult) => Promise<void>;
-  updateUser: (user: IUser) => void;
+  // Accepts a functional updater (like setState) so a caller can merge onto
+  // the *current* user rather than a possibly-stale snapshot it captured
+  // earlier (e.g. from a closure that outlived an in-flight request).
+  updateUser: (user: IUser | ((current: IUser | null) => IUser | null)) => void;
   signOut: () => Promise<void>;
 };
 
@@ -53,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await clearStoredToken();
     setUser(null);
     await logoutOfPurchases();
+    router.replace(routes.auth.signIn());
   };
 
   const value = useMemo<AuthStoreValue>(

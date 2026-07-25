@@ -14,6 +14,7 @@ export const routes = {
   settingsAccount: (): "/settings/account" => "/settings/account",
   settingsMembership: (): "/settings/membership" => "/settings/membership",
   settingsPermissions: (): "/settings/permissions" => "/settings/permissions",
+  settingsBlockedApps: (): "/settings/blocked-apps" => "/settings/blocked-apps",
   settingsHelpCenter: (): "/settings/help-center" => "/settings/help-center",
   eveningReview: (): "/evening-review" => "/evening-review",
   paywall: (): "/paywall" => "/paywall",

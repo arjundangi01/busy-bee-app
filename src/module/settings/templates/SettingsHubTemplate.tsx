@@ -1,4 +1,4 @@
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Constants from "expo-constants";
 import { router } from "expo-router";
@@ -65,8 +65,22 @@ export function SettingsHubTemplate() {
                 </View>
               }
               onPress={() => router.push(routes.settingsPermissions())}
-              isLast
+              isLast={Platform.OS !== "android"}
             />
+            {/* Android only — Apple's FamilyControls forces a system app picker with
+                no app-name access, so this screen can't be built the same way on iOS. */}
+            {Platform.OS === "android" && (
+              <HubRow
+                label="Blocked Apps"
+                leading={
+                  <View style={styles.iconBadge}>
+                    <Text style={styles.iconGlyph}>⊘</Text>
+                  </View>
+                }
+                onPress={() => router.push(routes.settingsBlockedApps())}
+                isLast
+              />
+            )}
           </StatCard>
         </View>
 

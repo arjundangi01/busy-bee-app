@@ -35,7 +35,11 @@ export const signInWithGoogle = async (): Promise<string | null> => {
     throw new Error("Google sign-in didn't return a token");
   }
 
-  const credential = GoogleAuthProvider.credential(response.data.idToken);
+  // signIn() only returns idToken as of google-signin v13+ (Credential Manager
+  // migration) — accessToken must be fetched separately, and Firebase's native
+  // GoogleAuthProvider.credential() throws if it's missing.
+  const { accessToken } = await GoogleSignin.getTokens();
+  const credential = GoogleAuthProvider.credential(response.data.idToken, accessToken);
   const auth = getAuth(getApp());
   const userCredential = await signInWithCredential(auth, credential);
   return getIdToken(userCredential.user);

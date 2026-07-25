@@ -56,6 +56,15 @@ const getHeadlineCopy = (
         subline: "Unlimited sessions, no time limit, full analytics detail.",
         confirmationBody: "You're all set — Pro is active on your account.",
       };
+    default:
+      // entry comes from a route param, not a closed call site — an
+      // unrecognized/missing value (bad deep link, stale navigation state)
+      // falls back to the generic Settings copy instead of crashing the page.
+      return {
+        headline: "Upgrade to Pro.",
+        subline: "Unlimited sessions, no time limit, full analytics detail.",
+        confirmationBody: "You're all set — Pro is active on your account.",
+      };
   }
 };
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Android 11+ package visibility: without this <queries> declaration,
+      PackageManager#getInstalledApplications / #getLaunchIntentForPackage
+      can only see this app's own package. Declaring the standard
+      MAIN/LAUNCHER intent filter here (merged into the host app's manifest
+      by the Android Gradle Plugin's manifest merger) lets the module see
+      every other launchable app, matching what a real device home screen
+      shows, without the heavily-restricted QUERY_ALL_PACKAGES permission.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+</manifest>
