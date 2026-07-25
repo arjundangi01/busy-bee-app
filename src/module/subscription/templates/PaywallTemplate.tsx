@@ -59,6 +59,24 @@ const getHeadlineCopy = (
   }
 };
 
+const getBenefits = (limits: IPlanLimits): { title: string; description: string }[] => [
+  {
+    title: "Unlimited sessions",
+    description:
+      limits.dailySessionCap !== null
+        ? `No ${limits.dailySessionCap}-a-day cap — start as many focus sessions as the day needs.`
+        : "No daily cap — start as many focus sessions as the day needs.",
+  },
+  {
+    title: "Deeper analytics",
+    description: "Hourly breakdowns and full detail, not just the daily/weekly view.",
+  },
+  {
+    title: "Streak & time reclaimed, carried through",
+    description: "The tracking you already have, with finer history and detail.",
+  },
+];
+
 const getComparisonRows = (limits: IPlanLimits): { label: string; free: string; pro: string }[] => [
   {
     label: "Sessions per day",
@@ -99,6 +117,7 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
   }, []);
 
   const copy = getHeadlineCopy(entry, limits);
+  const benefits = getBenefits(limits);
   const comparisonRows = getComparisonRows(limits);
   const priceLabel = proPackage
     ? `${proPackage.product.priceString}/month · billed monthly · cancel anytime`
@@ -166,6 +185,20 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
             <View style={styles.headlineZone}>
               <Text style={styles.headline}>{copy.headline}</Text>
               <Text style={styles.subline}>{copy.subline}</Text>
+            </View>
+
+            <View style={styles.benefits}>
+              {benefits.map((benefit) => (
+                <View key={benefit.title} style={styles.benefitRow}>
+                  <View style={styles.benefitBadge}>
+                    <Text style={styles.benefitBadgeGlyph}>✓</Text>
+                  </View>
+                  <View style={styles.benefitText}>
+                    <Text style={styles.benefitTitle}>{benefit.title}</Text>
+                    <Text style={styles.benefitDescription}>{benefit.description}</Text>
+                  </View>
+                </View>
+              ))}
             </View>
 
             <View style={styles.comparisonTable}>
@@ -259,6 +292,43 @@ const createStyles = (colors: IColorTokens) =>
     subline: {
       color: colors.textSecondary,
       fontSize: 15,
+    },
+    benefits: {
+      marginTop: spacing.md,
+      gap: spacing.sm,
+    },
+    benefitRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      alignItems: "flex-start",
+    },
+    benefitBadge: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      marginTop: 1,
+      backgroundColor: colors.invertFill,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    benefitBadgeGlyph: {
+      color: colors.invertText,
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    benefitText: {
+      flex: 1,
+      gap: 1,
+    },
+    benefitTitle: {
+      color: colors.text,
+      fontSize: 13.5,
+      fontWeight: "700",
+    },
+    benefitDescription: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 16,
     },
     comparisonTable: {
       marginTop: spacing.lg,

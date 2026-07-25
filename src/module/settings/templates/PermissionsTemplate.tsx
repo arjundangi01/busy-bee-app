@@ -1,18 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import { TopBar } from "@/components/navigation/TopBar";
 import { NotificationsSection } from "@/module/settings/components/NotificationsSection";
 import { PermissionsSection } from "@/module/settings/components/PermissionsSection";
-import { SubscriptionSection } from "@/module/settings/components/SubscriptionSection";
-import { useAuthStore } from "@/store/auth-store";
 import { IColorTokens, spacing, useColors } from "@/theme";
 
 const TOAST_DURATION_MS = 2000;
 
-export function SettingsTemplate() {
+export function PermissionsTemplate() {
   const colors = useColors();
   const styles = createStyles(colors);
-  const { signOut } = useAuthStore();
   const [toastVisible, setToastVisible] = useState(false);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -30,22 +29,20 @@ export function SettingsTemplate() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <TopBar variant="sub-screen" title="Permissions" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.pageTitle}>Settings</Text>
+        <Text style={styles.intro}>
+          Some of what busy-bee does needs OS-level access. Everything here is optional and reversible.
+        </Text>
 
-        <SubscriptionSection />
-        <NotificationsSection onSaved={showSavedToast} />
         <PermissionsSection />
+        <NotificationsSection onSaved={showSavedToast} />
 
         {toastVisible && (
           <View style={styles.toast}>
             <Text style={styles.toastText}>Saved</Text>
           </View>
         )}
-
-        <Pressable onPress={signOut} hitSlop={12} style={styles.signOutRow}>
-          <Text style={styles.signOut}>Sign out</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -59,14 +56,14 @@ const createStyles = (colors: IColorTokens) =>
     },
     content: {
       paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
       paddingBottom: spacing.lg,
       gap: spacing.lg,
     },
-    pageTitle: {
-      color: colors.text,
-      fontSize: 22,
-      fontWeight: "700",
-      paddingTop: spacing.md,
+    intro: {
+      color: colors.textSecondary,
+      fontSize: 12.5,
+      lineHeight: 18,
     },
     toast: {
       alignSelf: "center",
@@ -81,13 +78,5 @@ const createStyles = (colors: IColorTokens) =>
       color: colors.text,
       fontSize: 12,
       fontWeight: "600",
-    },
-    signOutRow: {
-      alignItems: "center",
-      paddingVertical: spacing.md,
-    },
-    signOut: {
-      color: colors.textSecondary,
-      fontSize: 15,
     },
   });

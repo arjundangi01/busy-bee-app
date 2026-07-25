@@ -6,31 +6,39 @@ import { configureGoogleSignIn } from "@/lib/googleAuth";
 import { initPurchases } from "@/lib/purchases";
 import { OnboardingPermissionsProvider } from "@/module/onboarding/context/OnboardingPermissionsContext";
 import { AuthProvider } from "@/store/auth-store";
-import { useColors } from "@/theme";
+import { ThemeProvider, useColors } from "@/theme";
 
-export default function RootLayout() {
+function RootNavigator() {
   const colors = useColors();
 
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: "fade",
+        contentStyle: { backgroundColor: colors.bg },
+      }}
+    >
+      <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
   useEffect(() => {
     initPurchases();
     configureGoogleSignIn();
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <OnboardingPermissionsProvider>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: "fade",
-              contentStyle: { backgroundColor: colors.bg },
-            }}
-          >
-            <Stack.Screen name="paywall" options={{ presentation: "modal" }} />
-          </Stack>
-        </OnboardingPermissionsProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <OnboardingPermissionsProvider>
+            <RootNavigator />
+          </OnboardingPermissionsProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

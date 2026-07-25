@@ -7,6 +7,12 @@ import { IApiResponse, IAuthResult } from "@/types";
 type IUpdatePreferencesPayload = {
   pushNotificationsEnabled?: boolean;
   eodNudgeEnabled?: boolean;
+  // My Account — same PATCH /auth/me endpoint handles profile edits too.
+  name?: string;
+  occupation?: string;
+  phone?: string;
+  age?: number;
+  bio?: string;
 };
 
 export function useUpdatePreferences() {

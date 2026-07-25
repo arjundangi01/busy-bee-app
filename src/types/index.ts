@@ -14,6 +14,10 @@ export type IUser = {
   notificationsGranted: boolean | null;
   pushNotificationsEnabled: boolean;
   eodNudgeEnabled: boolean;
+  occupation: string | null;
+  phone: string | null;
+  age: number | null;
+  bio: string | null;
 };
 
 export type IAuthResult = {
