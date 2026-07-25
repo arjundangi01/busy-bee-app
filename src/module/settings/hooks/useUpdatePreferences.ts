@@ -15,6 +15,8 @@ type IUpdatePreferencesPayload = {
   bio?: string;
   // Bee's Hive — same PATCH /auth/me endpoint handles the work-type pick too.
   selectedWorkTypeId?: string;
+  // One-way flag — see design-artifacts/evolution/specs/06-permission-priming.md.
+  accessibilityPrimingShown?: boolean;
 };
 
 export function useUpdatePreferences() {

@@ -16,6 +16,7 @@ export const routes = {
   settingsPermissions: (): "/settings/permissions" => "/settings/permissions",
   settingsBlockedApps: (): "/settings/blocked-apps" => "/settings/blocked-apps",
   beesHive: (): "/bees-hive" => "/bees-hive",
+  permissionPriming: (): "/permission-priming" => "/permission-priming",
   settingsHelpCenter: (): "/settings/help-center" => "/settings/help-center",
   eveningReview: (): "/evening-review" => "/evening-review",
   paywall: (): "/paywall" => "/paywall",

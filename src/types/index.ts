@@ -20,6 +20,7 @@ export type IUser = {
   age: number | null;
   bio: string | null;
   selectedWorkTypeId: string | null;
+  accessibilityPrimingShown: boolean;
 };
 
 export type IAuthResult = {

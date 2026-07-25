@@ -1,4 +1,13 @@
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -8,9 +17,11 @@ import { TopBar } from "@/components/navigation/TopBar";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useDashboard } from "@/module/dashboard/hooks/useDashboard";
 import { routes } from "@/config/routes";
+import { useAuthStore } from "@/store/auth-store";
 import { IColorTokens, spacing, useColors } from "@/theme";
 import { formatMinutesAsHoursAndMinutes } from "@/lib/utils/format";
 import { ITrendDay } from "@/types";
+import * as BlockingEnforcement from "../../../../modules/blocking-enforcement";
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -18,6 +29,22 @@ export function HomeTemplate() {
   const colors = useColors();
   const styles = createStyles(colors);
   const { dashboard, isLoading, isRefetching, error, refresh } = useDashboard();
+  const { user } = useAuthStore();
+
+  // One-time just-in-time permission nudge (design-artifacts/evolution/specs/
+  // 06-permission-priming.md) — routes through it instead of straight to
+  // Start Mission Flow only the first time, only on Android, and only if the
+  // permission isn't already granted some other way (e.g. via 5.1 Settings).
+  const handleStart = async () => {
+    if (Platform.OS === "android" && user && !user.accessibilityPrimingShown) {
+      const isEnabled = await BlockingEnforcement.isAccessibilityServiceEnabled();
+      if (!isEnabled) {
+        router.push(routes.permissionPriming());
+        return;
+      }
+    }
+    router.push(routes.startMission());
+  };
 
   if (isLoading && !dashboard) {
     return (
@@ -117,7 +144,7 @@ export function HomeTemplate() {
       </ScrollView>
 
       <View style={styles.ctaWrapper}>
-        <PrimaryButton label="Start" onPress={() => router.push(routes.startMission())} />
+        <PrimaryButton label="Start" onPress={handleStart} />
       </View>
     </SafeAreaView>
   );
