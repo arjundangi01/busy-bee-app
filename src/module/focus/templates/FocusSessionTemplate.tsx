@@ -33,6 +33,12 @@ const HOLD_DURATION_MS = 1500;
 
 type FocusSessionTemplateProps = {
   missionId: string;
+  // Fired once the screen has something real to show — either the scene's
+  // work-type data resolved, or the session failed to start at all (nothing
+  // left to preload for the error view). HiveEntryReveal holds its cloud
+  // reveal open-ish until this fires, so it never uncovers an empty
+  // background that then pops the real scene in afterward.
+  onSceneReady?: () => void;
 };
 
 const formatElapsed = (totalSeconds: number): string => {
@@ -61,7 +67,7 @@ const HUD = {
   warning: "#ffcf8a",
 };
 
-export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
+export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTemplateProps) {
   const colors = useColors();
   const styles = createStyles(colors);
   const { mission, completeTask, completingTaskId } = useMission(missionId);
@@ -82,6 +88,7 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
   const [stepsCompleted, setStepsCompleted] = useState(0);
   const [startError, setStartError] = useState<string | null>(null);
   const timeLimitHandledRef = useRef(false);
+  const sceneReadyHandledRef = useRef(false);
 
   const currentTask = mission?.nextTask ?? null;
   const totalSteps = mission?.tasks.length ?? 0;
@@ -167,6 +174,14 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
       router.replace({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.SESSION_TIME_LIMIT } });
     });
   }, [sessionDurationCapSeconds, focusSessionId, elapsedSeconds, end]);
+
+  useEffect(() => {
+    if (sceneReadyHandledRef.current) return;
+    if (startError || sessionWorkType) {
+      sceneReadyHandledRef.current = true;
+      onSceneReady?.();
+    }
+  }, [startError, sessionWorkType, onSceneReady]);
 
   const goToSessionComplete = (completedCount: number, distractionsBlocked: number) => {
     router.replace({
