@@ -23,10 +23,9 @@ import { FOCUS_SESSION_ERROR_CODE } from "@/module/focus/utils/enums";
 import { computeCurrentWorkUnit } from "@/module/focus/utils/workProgress";
 import { useBlocklist } from "@/module/settings/hooks/useBlocklist";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
-import { wasPaywallDismissedToday } from "@/module/subscription/utils/dismissal";
 import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
 import { routes } from "@/config/routes";
-import { getErrorCode } from "@/lib/utils/errors";
+import { getErrorCode, getErrorMessage } from "@/lib/utils/errors";
 import { IColorTokens, spacing, useColors } from "@/theme";
 import { SESSION_END_REASON, TASK_STATUS } from "@/utils/enums";
 
@@ -63,6 +62,7 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
   const [stepComplete, setStepComplete] = useState(false);
   const [exitOverlayOpen, setExitOverlayOpen] = useState(false);
   const [stepsCompleted, setStepsCompleted] = useState(0);
+  const [startError, setStartError] = useState<string | null>(null);
   const timeLimitHandledRef = useRef(false);
 
   const currentTask = mission?.nextTask ?? null;
@@ -110,26 +110,30 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
             setElapsedSeconds(Math.max(0, Math.round((Date.now() - new Date(active.startedAt).getTime()) / 1000)));
             return;
           }
-          router.replace(routes.tabs.home());
+          // The active session ended between the failed start() and this
+          // lookup — the original "already active" message would be wrong
+          // to show here, since there's no longer an active session at all.
+          setStartError("Your session state changed — try starting again.");
           return;
         }
 
         if (code === FOCUS_SESSION_ERROR_CODE.SESSION_CAP_REACHED) {
-          const alreadyDismissedToday = await wasPaywallDismissedToday();
-          if (!alreadyDismissedToday) {
-            router.replace({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.SESSION_CAP, missionId } });
-            return;
-          }
+          // Tapping Start is a fresh, deliberate action each time — always
+          // show the paywall rather than remembering an earlier dismissal.
+          router.replace({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.SESSION_CAP, missionId } });
+          return;
         }
-        router.replace(routes.tabs.home());
+
+        setStartError(getErrorMessage(error));
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [missionId]);
 
   useEffect(() => {
+    if (startError) return;
     const interval = setInterval(() => setElapsedSeconds((prev) => prev + 1), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [startError]);
 
   useEffect(() => {
     // sessionDurationCapSeconds is null for both Pro (genuinely unlimited)
@@ -183,6 +187,17 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
     BlockingEnforcement.clearActiveSession();
     router.replace(routes.tabs.home());
   };
+
+  if (startError) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+        <View style={styles.startErrorWrap}>
+          <Text style={styles.startErrorText}>{startError}</Text>
+          <PrimaryButton label="Back to Home" onPress={() => router.replace(routes.tabs.home())} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
@@ -319,6 +334,18 @@ const createStyles = (colors: IColorTokens) =>
     safeArea: {
       flex: 1,
       backgroundColor: colors.bg,
+    },
+    startErrorWrap: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.lg,
+      paddingHorizontal: spacing.xxl,
+    },
+    startErrorText: {
+      color: colors.danger,
+      fontSize: 15,
+      textAlign: "center",
     },
     header: {
       flexDirection: "row",

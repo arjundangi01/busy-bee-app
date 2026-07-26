@@ -7,7 +7,6 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
 import { useWorkTypes } from "@/module/focus/hooks/useWorkTypes";
 import { getProPackage, isPurchasesConfigured, purchasePackage } from "@/lib/purchases";
-import { markPaywallDismissedToday } from "@/module/subscription/utils/dismissal";
 import { FALLBACK_PRO_PRICE_LABEL } from "@/module/subscription/utils/constants";
 import { formatDurationCap } from "@/module/subscription/utils/formatLimits";
 import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
@@ -161,8 +160,7 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
     ? `${proPackage.product.priceString}/month · billed monthly · cancel anytime`
     : FALLBACK_PRO_PRICE_LABEL;
 
-  const handleDismiss = async () => {
-    await markPaywallDismissedToday();
+  const handleDismiss = () => {
     if (
       entry === PAYWALL_ENTRY.ANALYTICS ||
       entry === PAYWALL_ENTRY.SETTINGS ||
