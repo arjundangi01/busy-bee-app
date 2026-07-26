@@ -9,6 +9,8 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Defs, RadialGradient, Stop, Circle } from "react-native-svg";
 import { IColorTokens, spacing, useColors } from "@/theme";
+import { WorkTypeScene } from "@/components/content/companion/WorkTypeScene";
+import type { BeeSkin } from "@/components/content/companion/BeeCharacter";
 
 // design-artifacts/D-Design-System/components/content/01-companion-presence-element.md
 // One component with a `state` prop, never a separate component per pose.
@@ -36,10 +38,19 @@ type CompanionProps = {
   // other caption is secondary (color-text-secondary).
   captionIsHeadline?: boolean;
   // Only meaningful for "at-work"/"distracted" — renders the current work
-  // type's unit progress as a row of pips beneath the presence circle. A
-  // real illustration per work type (honeycomb cells, flowers) is a
-  // content/asset pass, not built this cycle — see 03-companion-work-types.md.
+  // type as a live illustrated scene (WorkTypeScene: BeeCharacter + a
+  // honeycomb/flower-field environment that fills in with real elapsed
+  // progress), replacing the base presence circle rather than sitting
+  // beneath it — see 03-companion-work-types.md.
   workProgress?: CompanionWorkProgress;
+  // The session's work type key (IWorkType.key, e.g. "honeycomb-building")
+  // — selects which WorkTypeScene renders. Falls back to the honeycomb
+  // scene if omitted/unrecognized.
+  workTypeKey?: string;
+  // The user's selected Bee's Hive appearance skin, only meaningful
+  // alongside workProgress — the base idle/greeting/etc. presence circle
+  // doesn't (yet) reflect skin selection.
+  skin?: BeeSkin;
 };
 
 const SIZE_BY_STATE: Record<CompanionState, number> = {
@@ -52,12 +63,13 @@ const SIZE_BY_STATE: Record<CompanionState, number> = {
   mentioned: 24,
 };
 
-export function Companion({ state, caption, captionIsHeadline, workProgress }: CompanionProps) {
+export function Companion({ state, caption, captionIsHeadline, workProgress, workTypeKey, skin }: CompanionProps) {
   const colors = useColors();
   const styles = createStyles(colors);
   const size = SIZE_BY_STATE[state];
   const isAtWork = state === "at-work";
   const isDistracted = state === "distracted";
+  const showWorkScene = Boolean(workProgress) && (isAtWork || isDistracted);
   const pulse = useSharedValue(0);
 
   useEffect(() => {
@@ -75,48 +87,43 @@ export function Companion({ state, caption, captionIsHeadline, workProgress }: C
 
   return (
     <View style={state === "mentioned" ? styles.inlineWrapper : styles.wrapper}>
-      <View style={{ width: size * 1.7, height: size * 1.7, alignItems: "center", justifyContent: "center" }}>
-        <Animated.View
-          style={[
-            styles.glow,
-            glowStyle,
-            { width: size * 1.5, height: size * 1.5, borderRadius: size * 0.75 },
-            // Distracted renders in a flat, muted tone rather than the warm
-            // accent glow — a visual "paused," not a color swap that could
-            // read as an error/danger state.
-            isDistracted && { backgroundColor: colors.textFaint },
-          ]}
+      {showWorkScene ? (
+        <WorkTypeScene
+          workTypeKey={workTypeKey}
+          currentUnit={workProgress!.currentUnit}
+          totalUnits={workProgress!.totalUnits}
+          reacting={isDistracted}
+          skin={skin}
         />
-        <Svg width={size} height={size} viewBox="0 0 100 100">
-          <Defs>
-            <RadialGradient id="companionGradient" cx="35%" cy="30%" r="75%">
-              <Stop offset="0%" stopColor={isDistracted ? colors.textMuted : colors.accentGradient[0]} />
-              <Stop offset="55%" stopColor={isDistracted ? colors.textFaint : colors.accentGradient[1]} />
-              <Stop offset="100%" stopColor={isDistracted ? colors.textFaint : colors.accentGradient[2]} />
-            </RadialGradient>
-          </Defs>
-          <Circle cx="50" cy="50" r="48" fill="url(#companionGradient)" />
-        </Svg>
-      </View>
+      ) : (
+        <View style={{ width: size * 1.7, height: size * 1.7, alignItems: "center", justifyContent: "center" }}>
+          <Animated.View
+            style={[
+              styles.glow,
+              glowStyle,
+              { width: size * 1.5, height: size * 1.5, borderRadius: size * 0.75 },
+              // Distracted renders in a flat, muted tone rather than the warm
+              // accent glow — a visual "paused," not a color swap that could
+              // read as an error/danger state.
+              isDistracted && { backgroundColor: colors.textFaint },
+            ]}
+          />
+          <Svg width={size} height={size} viewBox="0 0 100 100">
+            <Defs>
+              <RadialGradient id="companionGradient" cx="35%" cy="30%" r="75%">
+                <Stop offset="0%" stopColor={isDistracted ? colors.textMuted : colors.accentGradient[0]} />
+                <Stop offset="55%" stopColor={isDistracted ? colors.textFaint : colors.accentGradient[1]} />
+                <Stop offset="100%" stopColor={isDistracted ? colors.textFaint : colors.accentGradient[2]} />
+              </RadialGradient>
+            </Defs>
+            <Circle cx="50" cy="50" r="48" fill="url(#companionGradient)" />
+          </Svg>
+        </View>
+      )}
       {caption && (
         <Text style={[styles.caption, captionIsHeadline ? styles.captionHeadline : styles.captionDefault]}>
           {caption}
         </Text>
-      )}
-      {workProgress && (
-        <View style={styles.progressRow}>
-          {Array.from({ length: workProgress.totalUnits }, (_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.progressPip,
-                index < workProgress.currentUnit
-                  ? { backgroundColor: colors.accent }
-                  : { backgroundColor: colors.borderSubtle },
-              ]}
-            />
-          ))}
-        </View>
       )}
     </View>
   );
@@ -148,17 +155,5 @@ const createStyles = (colors: IColorTokens) =>
       color: colors.text,
       fontSize: 20,
       fontWeight: "700",
-    },
-    progressRow: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      justifyContent: "center",
-      gap: spacing.xxxs,
-      maxWidth: 160,
-    },
-    progressPip: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
     },
   });
