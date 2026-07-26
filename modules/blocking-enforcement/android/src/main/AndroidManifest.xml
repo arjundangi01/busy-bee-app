@@ -5,6 +5,18 @@
          ongoing session notification this module manages. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Required to run FocusSessionForegroundService (the ongoing "a
+         session is active" presence — see 02-session-notification.md).
+         specialUse is the correct Android 14 (API 34+) foreground service
+         type here: this isn't mediaPlayback/location/camera/etc, it's a
+         bespoke "app enforcement session is active" use case, which is
+         exactly what specialUse (+ the PROPERTY_SPECIAL_USE_FGS_SUBTYPE
+         declaration below) exists for. Google Play's data-safety/
+         declarations form needs a matching justification at submission
+         time — not just a code-level requirement. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
     <application>
         <!--
           BIND_ACCESSIBILITY_SERVICE on the <service> itself is what makes this
@@ -41,5 +53,19 @@
             android:taskAffinity=""
             android:excludeFromRecents="true"
             android:theme="@style/BlockedInterstitialTheme" />
+
+        <!--
+          Not exported — only ever started from within this app process
+          (BlockingEnforcementModule at session start/end, or
+          BlockingAccessibilityService's self-heal restart).
+        -->
+        <service
+            android:name="expo.modules.blockingenforcement.FocusSessionForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Ongoing focus-session and app-blocking enforcement indicator" />
+        </service>
     </application>
 </manifest>

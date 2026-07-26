@@ -14,9 +14,11 @@ import { Companion } from "@/components/content/Companion";
 import { StatCard } from "@/components/content/StatCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useMission } from "@/module/missions/hooks/useMission";
-import { useFocusSession } from "@/module/focus/hooks/useFocusSession";
+import { fetchActiveFocusSession, useFocusSession } from "@/module/focus/hooks/useFocusSession";
 import { useBlockingEnforcement } from "@/module/focus/hooks/useBlockingEnforcement";
 import { useWorkTypes } from "@/module/focus/hooks/useWorkTypes";
+import { useBeeSkins } from "@/module/hive/hooks/useBeeSkins";
+import { useAuthStore } from "@/store/auth-store";
 import { FOCUS_SESSION_ERROR_CODE } from "@/module/focus/utils/enums";
 import { computeCurrentWorkUnit } from "@/module/focus/utils/workProgress";
 import { useBlocklist } from "@/module/settings/hooks/useBlocklist";
@@ -50,6 +52,9 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
   const { limits } = useEntitlement();
   const { blockedApps } = useBlocklist();
   const { workTypes } = useWorkTypes();
+  const { beeSkins } = useBeeSkins();
+  const { user } = useAuthStore();
+  const selectedSkin = beeSkins.find((skin) => skin.id === user?.selectedSkinId) ?? null;
   const sessionDurationCapSeconds = limits.sessionDurationCapSeconds;
 
   const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
@@ -75,8 +80,6 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
     missionId,
     blockedPackageNames: blockedApps.map((app) => app.packageName),
     currentStepText: currentTask?.title ?? "",
-    elapsedSeconds,
-    elapsedLabel: formatElapsed(elapsedSeconds),
     currentWorkUnit,
   });
 
@@ -85,9 +88,31 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
       .then((session) => {
         setFocusSessionId(session.id);
         setSessionWorkTypeId(session.workTypeId);
+        // Seed from the server's startedAt rather than assuming 0 — matters
+        // when adopting an already-running session (see SESSION_ALREADY_ACTIVE
+        // below), and is simply more correct for a fresh session too.
+        setElapsedSeconds(Math.max(0, Math.round((Date.now() - new Date(session.startedAt).getTime()) / 1000)));
       })
       .catch(async (error) => {
         const code = getErrorCode(error);
+
+        if (code === FOCUS_SESSION_ERROR_CODE.SESSION_ALREADY_ACTIVE) {
+          const active = await fetchActiveFocusSession();
+          if (active && active.missionId !== missionId) {
+            // The active session belongs to a different mission — send the
+            // user to that screen instead of grafting foreign state in here.
+            router.replace(routes.focusSession(active.missionId));
+            return;
+          }
+          if (active) {
+            setFocusSessionId(active.id);
+            setSessionWorkTypeId(active.workTypeId);
+            setElapsedSeconds(Math.max(0, Math.round((Date.now() - new Date(active.startedAt).getTime()) / 1000)));
+            return;
+          }
+          router.replace(routes.tabs.home());
+          return;
+        }
 
         if (code === FOCUS_SESSION_ERROR_CODE.SESSION_CAP_REACHED) {
           const alreadyDismissedToday = await wasPaywallDismissedToday();
@@ -211,6 +236,8 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
                 ? { currentUnit: currentWorkUnit, totalUnits: sessionWorkType.totalUnits }
                 : undefined
             }
+            workTypeKey={sessionWorkType?.key}
+            skin={selectedSkin ?? undefined}
           />
         </View>
       </View>

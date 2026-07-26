@@ -36,6 +36,10 @@ export function HomeTemplate() {
   // Start Mission Flow only the first time, only on Android, and only if the
   // permission isn't already granted some other way (e.g. via 5.1 Settings).
   const handleStart = async () => {
+    if (dashboard?.activeSession) {
+      router.push(routes.focusSession(dashboard.activeSession.missionId));
+      return;
+    }
     if (Platform.OS === "android" && user && !user.accessibilityPrimingShown) {
       const isEnabled = await BlockingEnforcement.isAccessibilityServiceEnabled();
       if (!isEnabled) {
@@ -82,6 +86,19 @@ export function HomeTemplate() {
             >
               <Companion state="idle" caption="At rest — ready when you are." />
             </Pressable>
+
+            {dashboard.activeSession && (
+              <Pressable
+                onPress={() => router.push(routes.focusSession(dashboard.activeSession!.missionId))}
+                accessibilityRole="button"
+                accessibilityLabel="Resume your focus session in progress"
+              >
+                <StatCard style={styles.activeSessionCard}>
+                  <Text style={styles.activeSessionHeadline}>Focus session in progress</Text>
+                  <Text style={styles.activeSessionMeta}>Tap to resume</Text>
+                </StatCard>
+              </Pressable>
+            )}
 
             <View style={styles.statRow}>
               <View style={styles.statTile} accessible accessibilityLabel={`${dashboard.streakDays} day streak`}>
@@ -232,6 +249,19 @@ const createStyles = (colors: IColorTokens) =>
     trendDayLabel: {
       color: colors.textSecondary,
       fontSize: 9,
+    },
+    activeSessionCard: {
+      borderColor: colors.accent,
+    },
+    activeSessionHeadline: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    activeSessionMeta: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: spacing.xxxs,
     },
     todayHeadline: {
       color: colors.text,

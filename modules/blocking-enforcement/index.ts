@@ -15,8 +15,6 @@ type BlockingEnforcementNativeModule = {
   ) => Promise<void>;
   updateCurrentStep: (stepText: string) => Promise<void>;
   clearActiveSession: () => Promise<void>;
-  updateSessionNotification: (elapsedLabel: string) => Promise<void>;
-  clearSessionNotification: () => Promise<void>;
   getPendingBlockedAttempt: () => Promise<PendingBlockedAttempt | null>;
   isAccessibilityServiceEnabled: () => Promise<boolean>;
   openAccessibilitySettings: () => Promise<void>;
@@ -51,16 +49,6 @@ export async function updateCurrentStep(stepText: string): Promise<void> {
 export async function clearActiveSession(): Promise<void> {
   if (!isAvailable) return;
   await NativeModule!.clearActiveSession();
-}
-
-export async function updateSessionNotification(elapsedLabel: string): Promise<void> {
-  if (!isAvailable) return;
-  await NativeModule!.updateSessionNotification(elapsedLabel);
-}
-
-export async function clearSessionNotification(): Promise<void> {
-  if (!isAvailable) return;
-  await NativeModule!.clearSessionNotification();
 }
 
 export async function getPendingBlockedAttempt(): Promise<PendingBlockedAttempt | null> {

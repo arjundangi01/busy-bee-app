@@ -22,6 +22,7 @@
     "@react-native-google-signin/google-signin": "^16.1.2",
     "@tanstack/react-query": "^5.101.3",
     "axios": "^1.18.1",
+    "blocking-enforcement": "file:./modules/blocking-enforcement",
     "expo": "~57.0.7",
     "expo-constants": "~57.0.6",
     "expo-dev-client": "~57.0.8",

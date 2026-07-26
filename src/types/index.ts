@@ -20,6 +20,7 @@ export type IUser = {
   age: number | null;
   bio: string | null;
   selectedWorkTypeId: string | null;
+  selectedSkinId: string | null;
   accessibilityPrimingShown: boolean;
 };
 
@@ -34,6 +35,17 @@ export type IWorkType = {
   label: string;
   tier: "FREE" | "PRO";
   totalUnits: number;
+  locked: boolean;
+};
+
+export type IBeeSkin = {
+  id: string;
+  key: string;
+  label: string;
+  tier: "FREE" | "PRO";
+  bodyPrimary: string;
+  bodySecondary: string;
+  stripe: string;
   locked: boolean;
 };
 
@@ -99,6 +111,12 @@ export type ITodayCard = {
   tasksWaiting: number;
 };
 
+export type IActiveSession = {
+  focusSessionId: string;
+  missionId: string;
+  startedAt: string;
+};
+
 export type IDashboard = {
   name: string;
   streakDays: number;
@@ -108,6 +126,7 @@ export type IDashboard = {
   today: ITodayCard;
   patternSignal: string | null;
   isColdStart: boolean;
+  activeSession: IActiveSession | null;
 };
 
 export type IStreakCalendarCellStatus = "hit" | "miss" | "today" | "no-history";

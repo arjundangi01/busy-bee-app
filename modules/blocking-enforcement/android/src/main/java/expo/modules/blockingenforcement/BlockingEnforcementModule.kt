@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.text.TextUtils
+import androidx.core.content.ContextCompat
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -32,7 +33,18 @@ class BlockingEnforcementModule : Module() {
                 currentStepText: String,
             ->
             val context = requireContext()
+            // Persisted first, unconditionally — this is what
+            // BlockingAccessibilityService actually reads to decide whether
+            // to block. The foreground service below is presence/
+            // notification only; its failure must never look like the
+            // session failed to start.
             BlockingPrefs.setActiveSession(context, sessionId, missionId, blockedPackages, currentStepText)
+            try {
+                ContextCompat.startForegroundService(context, Intent(context, FocusSessionForegroundService::class.java))
+            } catch (error: Exception) {
+                // Best-effort — see the matching try/catch in
+                // BlockingAccessibilityService's self-heal call.
+            }
         }
 
         AsyncFunction("updateCurrentStep") { stepText: String ->
@@ -45,16 +57,7 @@ class BlockingEnforcementModule : Module() {
         AsyncFunction("clearActiveSession") {
             val context = requireContext()
             BlockingPrefs.clearActiveSession(context)
-            SessionNotificationManager.clear(context)
-        }
-
-        AsyncFunction("updateSessionNotification") { elapsedLabel: String ->
-            val context = requireContext()
-            SessionNotificationManager.show(context, elapsedLabel, BlockingPrefs.getCurrentStepText(context))
-        }
-
-        AsyncFunction("clearSessionNotification") {
-            SessionNotificationManager.clear(requireContext())
+            context.stopService(Intent(context, FocusSessionForegroundService::class.java))
         }
 
         // Consume-once: returns the most recent unread collision, if any,

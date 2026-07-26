@@ -19,6 +19,7 @@ object BlockingPrefs {
     private const val KEY_ACTIVE_MISSION_ID = "active_mission_id"
     private const val KEY_BLOCKED_PACKAGES = "blocked_packages"
     private const val KEY_CURRENT_STEP_TEXT = "current_step_text"
+    private const val KEY_ACTIVE_SESSION_STARTED_AT = "active_session_started_at"
     private const val KEY_PENDING_PACKAGE = "pending_blocked_package"
     private const val KEY_PENDING_AT = "pending_blocked_at"
 
@@ -42,10 +43,20 @@ object BlockingPrefs {
             .putString(KEY_ACTIVE_MISSION_ID, missionId)
             .putStringSet(KEY_BLOCKED_PACKAGES, blockedPackages.toSet())
             .putString(KEY_CURRENT_STEP_TEXT, currentStepText)
+            .putLong(KEY_ACTIVE_SESSION_STARTED_AT, System.currentTimeMillis())
             .apply()
     }
 
     fun getActiveMissionId(context: Context): String? = prefs(context).getString(KEY_ACTIVE_MISSION_ID, null)
+
+    // Native source of truth for elapsed-time display — read by
+    // FocusSessionForegroundService on every tick so the notification's
+    // elapsed time is computed independent of JS being alive. Absent (null)
+    // whenever there's no active session, including the never-set case.
+    fun getActiveSessionStartedAtMillis(context: Context): Long? {
+        val value = prefs(context).getLong(KEY_ACTIVE_SESSION_STARTED_AT, -1L)
+        return if (value == -1L) null else value
+    }
 
     fun updateCurrentStep(context: Context, stepText: String) {
         prefs(context).edit().putString(KEY_CURRENT_STEP_TEXT, stepText).apply()
@@ -57,6 +68,7 @@ object BlockingPrefs {
             .remove(KEY_ACTIVE_MISSION_ID)
             .remove(KEY_BLOCKED_PACKAGES)
             .remove(KEY_CURRENT_STEP_TEXT)
+            .remove(KEY_ACTIVE_SESSION_STARTED_AT)
             .apply()
     }
 

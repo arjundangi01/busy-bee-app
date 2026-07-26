@@ -1,17 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { AppState, AppStateStatus, Platform } from "react-native";
+import * as Notifications from "expo-notifications";
 import * as BlockingEnforcement from "../../../../modules/blocking-enforcement";
 import { useRecordBlockedAttempt } from "@/module/focus/hooks/useRecordBlockedAttempt";
-
-const NOTIFICATION_UPDATE_INTERVAL_SECONDS = 15;
 
 type UseBlockingEnforcementArgs = {
   focusSessionId: string | null;
   missionId: string;
   blockedPackageNames: string[];
   currentStepText: string;
-  elapsedSeconds: number;
-  elapsedLabel: string;
   // The work-unit index the Companion is currently rendering (see
   // computeCurrentWorkUnit) — used only to derive when "distracted" should
   // clear back to "at-work": the moment this advances past the unit a
@@ -32,8 +29,6 @@ export function useBlockingEnforcement({
   missionId,
   blockedPackageNames,
   currentStepText,
-  elapsedSeconds,
-  elapsedLabel,
   currentWorkUnit,
 }: UseBlockingEnforcementArgs) {
   const { recordBlockedAttempt } = useRecordBlockedAttempt();
@@ -41,16 +36,12 @@ export function useBlockingEnforcement({
   const lastStepTextRef = useRef<string | null>(null);
   const [distractedSinceUnit, setDistractedSinceUnit] = useState<number | null>(null);
   // Read inside the AppState listener below instead of depending on the raw
-  // values directly — elapsedLabel/currentWorkUnit change every second while
-  // a session runs, and depending on them directly would tear down and
-  // resubscribe the global AppState listener every second too. Refs let the
-  // listener stay subscribed for the whole session while still reading
-  // current values when it actually fires. Updated via effects, never
+  // value directly — currentWorkUnit changes every few minutes while a
+  // session runs, and depending on it directly would tear down and
+  // resubscribe the global AppState listener each time. A ref lets the
+  // listener stay subscribed for the whole session while still reading the
+  // current value when it actually fires. Updated via an effect, never
   // during render (mutating a ref mid-render breaks under React Compiler).
-  const elapsedLabelRef = useRef(elapsedLabel);
-  useEffect(() => {
-    elapsedLabelRef.current = elapsedLabel;
-  }, [elapsedLabel]);
   const currentWorkUnitRef = useRef(currentWorkUnit);
   useEffect(() => {
     currentWorkUnitRef.current = currentWorkUnit;
@@ -80,6 +71,23 @@ export function useBlockingEnforcement({
     return () => subscription.remove();
   }, [focusSessionId]);
 
+  // Re-offered at every session start, unlike the accessibility check above
+  // (which re-checks continuously) — there's no in-session "went to Settings
+  // and came back" loop to close for notifications, only the one-time gap
+  // where onboarding's own prompt was skippable and never asked again.
+  // Non-blocking: the session starts regardless of the result, matching
+  // this module's existing "permission absence degrades gracefully" rule —
+  // if ungranted, the foreground service's notification silently won't be
+  // visible, but blocking enforcement itself is unaffected.
+  useEffect(() => {
+    if (!focusSessionId || Platform.OS !== "android") return;
+    Notifications.getPermissionsAsync().then((current) => {
+      if (current.status !== "granted") {
+        Notifications.requestPermissionsAsync();
+      }
+    });
+  }, [focusSessionId]);
+
   // Pushes session identity + blocklist snapshot once the session exists.
   // Re-runs only if the session/blocklist actually change, not on every
   // render — each call crosses the native bridge.
@@ -100,30 +108,18 @@ export function useBlockingEnforcement({
     BlockingEnforcement.updateCurrentStep(currentStepText);
   }, [focusSessionId, currentStepText]);
 
-  // Throttled to once per 15s of elapsed time rather than every 1s tick, to
-  // avoid hammering NotificationManager with an update the user can't
-  // perceive the difference of anyway.
-  useEffect(() => {
-    if (!focusSessionId) return;
-    if (elapsedSeconds === 0 || elapsedSeconds % NOTIFICATION_UPDATE_INTERVAL_SECONDS !== 0) return;
-    BlockingEnforcement.updateSessionNotification(elapsedLabel);
-  }, [focusSessionId, elapsedSeconds, elapsedLabel]);
-
   useEffect(() => {
     if (!focusSessionId) return;
 
-    // One more push the instant the app leaves the foreground, so the
-    // notification reflects genuinely fresh data for however long it stays
-    // backgrounded, not whatever the last 15-second tick happened to catch.
-    // On return to foreground, checks for a collision that happened while
-    // backgrounded (the interstitial itself has no reach into JS) and
-    // records it — consume-once on the native side, so this can never
-    // double-record the same attempt.
+    // The ongoing notification itself is now owned natively by
+    // FocusSessionForegroundService (started/stopped alongside
+    // setActiveSession/clearActiveSession) — it ticks its own elapsed-time
+    // display so it survives the app being backgrounded or force-exited,
+    // independent of JS being alive. This listener now only checks for a
+    // collision that happened while backgrounded (the interstitial itself
+    // has no reach into JS) and records it — consume-once on the native
+    // side, so this can never double-record the same attempt.
     const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
-      if (nextState === "background") {
-        BlockingEnforcement.updateSessionNotification(elapsedLabelRef.current);
-        return;
-      }
       if (nextState === "active") {
         BlockingEnforcement.getPendingBlockedAttempt().then((pending) => {
           if (!pending) return;

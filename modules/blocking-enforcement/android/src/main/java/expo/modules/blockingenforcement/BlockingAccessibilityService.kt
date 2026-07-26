@@ -3,6 +3,7 @@ package expo.modules.blockingenforcement
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
+import androidx.core.content.ContextCompat
 
 /**
  * Watches which app is in the foreground while a Focus Session is active
@@ -39,10 +40,39 @@ class BlockingAccessibilityService : AccessibilityService() {
         // No active session — nothing to enforce right now.
         BlockingPrefs.getActiveSessionId(this) ?: return
 
-        if (packageName !in BlockingPrefs.getBlockedPackages(this)) return
+        // The actual blocking decision — deliberately made and acted on
+        // before the self-heal call below, and never allowed to be skipped
+        // by it (see the try/catch there): the notification presence is a
+        // nice-to-have, this is the entire point of the feature.
+        if (packageName in BlockingPrefs.getBlockedPackages(this)) {
+            BlockingPrefs.recordPendingBlockedAttempt(this, packageName)
+            launchInterstitial(packageName)
+        }
 
-        BlockingPrefs.recordPendingBlockedAttempt(this, packageName)
-        launchInterstitial(packageName)
+        // Self-heal: FocusSessionForegroundService can be killed by the OS/
+        // OEM battery management independently of this AccessibilityService,
+        // which tends to survive more aggressively. Restarting it here is
+        // idempotent (onStartCommand just re-establishes foreground state
+        // and reschedules its own tick loop if already running) and is
+        // naturally throttled to once per real app switch by the dedup
+        // above, not once per raw accessibility event.
+        //
+        // Wrapped defensively: an uncaught exception inside
+        // onAccessibilityEvent crashes this entire AccessibilityService,
+        // which Android then unbinds — silently killing ALL blocking, not
+        // just the notification, until the user notices and manually
+        // re-enables the service in Settings. Android 12+'s
+        // ForegroundServiceStartNotAllowedException (a real possibility
+        // when starting a service from a callback context like this, not a
+        // foreground Activity) must never be allowed to take down blocking
+        // enforcement — it already degraded gracefully once above.
+        try {
+            ContextCompat.startForegroundService(this, Intent(this, FocusSessionForegroundService::class.java))
+        } catch (error: Exception) {
+            // Best-effort only — the notification may be stale/absent until
+            // the next natural setActiveSession/clearActiveSession call, but
+            // blocking itself is unaffected.
+        }
     }
 
     private fun launchInterstitial(blockedPackageName: String) {
@@ -50,7 +80,21 @@ class BlockingAccessibilityService : AccessibilityService() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             putExtra(BlockedAppInterstitialActivity.EXTRA_PACKAGE_NAME, blockedPackageName)
         }
-        startActivity(intent)
+        // A failure here (BAL restriction, OEM quirk) must not crash this
+        // service — that would silently disable ALL future blocking for the
+        // rest of the session (and until the user notices and manually
+        // re-toggles the accessibility permission), compounding one missed
+        // collision into a total outage. Worth surfacing in real testing —
+        // if this ever actually throws on-device, that's the concrete
+        // signal to dig into BAL exemptions specifically — but it must
+        // never be allowed to propagate uncaught from here.
+        try {
+            startActivity(intent)
+        } catch (error: Exception) {
+            // Nothing further to do — the pending-blocked-attempt record was
+            // already written before this call, so the collision is still
+            // counted even though the interstitial itself didn't show.
+        }
     }
 
     override fun onInterrupt() {

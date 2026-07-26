@@ -1,27 +1,26 @@
 package expo.modules.blockingenforcement
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 
 /**
- * The ongoing "a session is active" notification (spec: 02-session-notification.md).
- * Driven entirely by explicit calls from JS (via BlockingEnforcementModule) rather
- * than its own native timer — the RN side already ticks a 1-second interval for the
- * on-screen elapsed display, so reusing that instead of running a second, independent
- * native clock avoids two sources of truth for "how much time has elapsed" ever
- * drifting apart.
+ * Pure notification-builder for the ongoing "a session is active" notification
+ * (spec: 02-session-notification.md). Posting/canceling is owned by
+ * FocusSessionForegroundService via startForeground/stopForeground — this
+ * object only knows how to build the channel and the Notification object
+ * itself, so the same construction logic isn't duplicated between the
+ * service's initial startForeground() call and its periodic tick updates.
  */
 object SessionNotificationManager {
+    const val NOTIFICATION_ID = 4201
     private const val CHANNEL_ID = "focus_session_channel"
-    private const val NOTIFICATION_ID = 4201
 
-    private fun ensureChannel(context: Context) {
+    fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         if (manager.getNotificationChannel(CHANNEL_ID) != null) return
@@ -37,16 +36,7 @@ object SessionNotificationManager {
         manager.createNotificationChannel(channel)
     }
 
-    fun show(context: Context, elapsedLabel: String, stepText: String?) {
-        // POST_NOTIFICATIONS can be denied/not-yet-granted on API 33+; failing
-        // to post a notification is not a reason to crash a focus session.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) !=
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-
+    fun build(context: Context, elapsedLabel: String, stepText: String?): Notification {
         ensureChannel(context)
 
         val contentIntent = FocusSessionLauncher.buildIntent(context)
@@ -78,10 +68,6 @@ object SessionNotificationManager {
             builder.setContentIntent(pendingIntent)
         }
 
-        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, builder.build())
-    }
-
-    fun clear(context: Context) {
-        NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
+        return builder.build()
     }
 }

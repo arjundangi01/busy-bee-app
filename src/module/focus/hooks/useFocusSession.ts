@@ -4,6 +4,15 @@ import { getErrorMessage } from "@/lib/utils/errors";
 import { IApiResponse, IFocusSession } from "@/types";
 import { SESSION_END_REASON } from "@/utils/enums";
 
+// Imperative one-off read (not a rendered useQuery) — used from
+// FocusSessionTemplate's start() error handler to resolve which session/
+// mission a SESSION_ALREADY_ACTIVE rejection refers to, the same way
+// wasPaywallDismissedToday() is called imperatively from that same handler.
+export async function fetchActiveFocusSession(): Promise<IFocusSession | null> {
+  const response = await apiClient.get<IApiResponse<IFocusSession | null>>("/focus-sessions/active");
+  return response.data.data;
+}
+
 export function useFocusSession() {
   const queryClient = useQueryClient();
 
