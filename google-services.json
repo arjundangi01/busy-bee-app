@@ -1,40 +1,48 @@
 {
   "project_info": {
-    "project_number": "85621456499",
-    "project_id": "busy-bee-604b9",
-    "storage_bucket": "busy-bee-604b9.firebasestorage.app"
+    "project_number": "192522625879",
+    "project_id": "busy-bee-2f0c6",
+    "storage_bucket": "busy-bee-2f0c6.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:85621456499:android:09b7b1fedb8e571bfd7406",
+        "mobilesdk_app_id": "1:192522625879:android:501fca0d2bea627782d412",
         "android_client_info": {
-          "package_name": "com.busybee.app"
+          "package_name": "com.busybeeapp.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "85621456499-lubqgaualdnrfeclmrn46hrokr35t7b3.apps.googleusercontent.com",
+          "client_id": "192522625879-dnumdi4i440t7l6vj53imvlp1tno7bcc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.busybeeapp.app",
+            "certificate_hash": "6f157a99d449912cc9a1c4d04b5a10d631188ef4"
+          }
+        },
+        {
+          "client_id": "192522625879-vf3e743ugu4l9gq46v7ijbkkd3cb6trp.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAGD7zGaPW9SvAss_mOeWx6poljIDmasto"
+          "current_key": "AIzaSyAXNDe-fJx1KDC8l0DQl_zN210zWUK8W7g"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "85621456499-lubqgaualdnrfeclmrn46hrokr35t7b3.apps.googleusercontent.com",
+              "client_id": "192522625879-vf3e743ugu4l9gq46v7ijbkkd3cb6trp.apps.googleusercontent.com",
               "client_type": 3
             },
             {
-              "client_id": "85621456499-6cu5i2hsn1q0juf9csb5om1bom7bmrsq.apps.googleusercontent.com",
+              "client_id": "192522625879-luj8tpe7ai33vtt1ka2ncml5ped6fk3q.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.busybee.app"
+                "bundle_id": "com.busybeeapp.app"
               }
             }
           ]

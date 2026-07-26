@@ -9,11 +9,11 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.busybee.app",
+      "bundleIdentifier": "com.busybeeapp.app",
       "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
-      "package": "com.busybee.app",
+      "package": "com.busybeeapp.app",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
