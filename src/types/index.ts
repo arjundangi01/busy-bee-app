@@ -170,6 +170,11 @@ export type ISubscriptionStatus = {
   limits: IPlanLimits;
 };
 
+export type ITopDistraction = {
+  appName: string;
+  count: number;
+};
+
 export type IProgress = {
   currentStreakDays: number;
   bestStreakDays: number;
@@ -180,6 +185,13 @@ export type IProgress = {
   currentAvgFocusMinutes: number | null;
   bestFocusWindow: IFocusWindow | null;
   toughestDay: string | null;
-  distractionAttemptsThisWeek: number;
+  topDistraction: ITopDistraction | null;
+  longestFocusMinutes: number | null;
+  sessionsEndedEarlyThisWeek: number;
+  tasksPastTheirTime: number;
+  timeToStartMinutes: number | null;
+  bounceBackRatePercent: number | null;
+  missionCompletionRatePercent: number | null;
+  stepCompletionRatePercent: number | null;
   isColdStart: boolean;
 };

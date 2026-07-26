@@ -77,9 +77,10 @@ export function ProgressTemplate() {
         <StatCard>
           <Text style={styles.sectionLabel}>Time Reclaimed</Text>
           <Text style={styles.reclaimedValue}>
-            {formatMinutesAsHoursAndMinutes(progress.timeReclaimedThisWeekMinutes)}{" "}
+            {formatMinutesAsHoursAndMinutes(progress.timeReclaimedThisWeekMinutes)} (est.){" "}
             <Text style={styles.reclaimedUnit}>this week</Text>
           </Text>
+          <Text style={styles.reclaimedCaption}>Estimated from blocked attempts, not measured time</Text>
           {progress.timeReclaimedByWeekMinutes.length > 0 && (
             <WeeklyBarChart valuesByWeek={progress.timeReclaimedByWeekMinutes} />
           )}
@@ -106,7 +107,52 @@ export function ProgressTemplate() {
             value={progress.bestFocusWindow ? formatFocusWindow(progress.bestFocusWindow) : NOT_ENOUGH_DATA_YET}
           />
           <LabelValueRow label="Toughest day" value={progress.toughestDay ?? NOT_ENOUGH_DATA_YET} />
-          <LabelValueRow label="Distraction attempts" value={`${progress.distractionAttemptsThisWeek} this week`} />
+          <LabelValueRow
+            label="Top distraction"
+            value={
+              progress.topDistraction
+                ? `${progress.topDistraction.appName} · ${progress.topDistraction.count}×`
+                : NOT_ENOUGH_DATA_YET
+            }
+          />
+          <LabelValueRow
+            label="Longest focus"
+            value={
+              progress.longestFocusMinutes !== null
+                ? formatMinutesAsHoursAndMinutes(progress.longestFocusMinutes)
+                : NOT_ENOUGH_DATA_YET
+            }
+          />
+        </StatCard>
+
+        <StatCard>
+          <Text style={styles.sectionLabel}>Follow-Through</Text>
+          <LabelValueRow
+            label="Time to start"
+            value={progress.timeToStartMinutes !== null ? `${progress.timeToStartMinutes}m avg` : NOT_ENOUGH_DATA_YET}
+          />
+          <LabelValueRow
+            label="Bounce-back rate"
+            value={progress.bounceBackRatePercent !== null ? `${progress.bounceBackRatePercent}%` : NOT_ENOUGH_DATA_YET}
+          />
+          <LabelValueRow label="Sessions ended early" value={`${progress.sessionsEndedEarlyThisWeek} this week`} />
+          <LabelValueRow label="Tasks past their time" value={`${progress.tasksPastTheirTime} still open`} />
+          <LabelValueRow
+            label="Mission completion rate"
+            value={
+              progress.missionCompletionRatePercent !== null
+                ? `${progress.missionCompletionRatePercent}%`
+                : NOT_ENOUGH_DATA_YET
+            }
+          />
+          <LabelValueRow
+            label="Step completion rate"
+            value={
+              progress.stepCompletionRatePercent !== null
+                ? `${progress.stepCompletionRatePercent}%`
+                : NOT_ENOUGH_DATA_YET
+            }
+          />
         </StatCard>
 
         {!isPro && (
@@ -191,12 +237,17 @@ const createStyles = (colors: IColorTokens) =>
       fontSize: 17,
       fontWeight: "700",
       fontVariant: ["tabular-nums"],
-      marginBottom: spacing.sm,
+      marginBottom: spacing.xxs,
     },
     reclaimedUnit: {
       color: colors.textSecondary,
       fontSize: 12,
       fontWeight: "400",
+    },
+    reclaimedCaption: {
+      color: colors.textMuted,
+      fontSize: 11,
+      marginBottom: spacing.sm,
     },
     focusRow: {
       gap: spacing.xs,

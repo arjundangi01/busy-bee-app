@@ -124,7 +124,7 @@ export function useBlockingEnforcement({
         BlockingEnforcement.getPendingBlockedAttempt().then((pending) => {
           if (!pending) return;
           setDistractedSinceUnit(currentWorkUnitRef.current);
-          recordBlockedAttempt(focusSessionId).catch(() => {
+          recordBlockedAttempt({ focusSessionId, packageName: pending.packageName }).catch(() => {
             // Worth recording, never worth crashing an active session over
             // if the network call itself fails — the pending record is
             // already consumed, so this undercounts one attempt rather

@@ -11,9 +11,10 @@ export function useRecordBlockedAttempt() {
 
   const mutation = useMutation({
     mutationKey: ["focus-sessions", "record-blocked-attempt"],
-    mutationFn: async (focusSessionId: string) => {
+    mutationFn: async ({ focusSessionId, packageName }: { focusSessionId: string; packageName: string | null }) => {
       const response = await apiClient.post<IApiResponse<IFocusSession>>(
         `/focus-sessions/${focusSessionId}/blocked-attempt`,
+        { packageName },
       );
       return response.data.data as IFocusSession;
     },
