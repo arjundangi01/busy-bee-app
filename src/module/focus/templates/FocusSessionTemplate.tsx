@@ -9,9 +9,9 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import Svg, { Circle, Path } from "react-native-svg";
 import * as BlockingEnforcement from "../../../../modules/blocking-enforcement";
-import { Companion } from "@/components/content/Companion";
-import { StatCard } from "@/components/content/StatCard";
+import { WorkTypeScene } from "@/components/content/companion/WorkTypeScene";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useMission } from "@/module/missions/hooks/useMission";
 import { fetchActiveFocusSession, useFocusSession } from "@/module/focus/hooks/useFocusSession";
@@ -41,6 +41,24 @@ const formatElapsed = (totalSeconds: number): string => {
     .padStart(2, "0");
   const seconds = (totalSeconds % 60).toString().padStart(2, "0");
   return `${minutes}:${seconds}`;
+};
+
+// Fixed HUD chrome for the illustrated hive-workshop scene — part of the
+// same bounded, non-theme-reactive color exception as the scene itself
+// (evolution/specs/08-focus-session-hive-world-presence.md's Color &
+// Material section): a translucent dark card reads consistently over the
+// warm illustration in either app theme, the way a game HUD would, rather
+// than flipping to a plain white card in light mode.
+const HUD = {
+  pillBg: "rgba(20,14,8,0.62)",
+  pillBorder: "rgba(255,255,255,0.14)",
+  text: "#fff6de",
+  textSecondary: "#e6d9bd",
+  signBg: "#8a6238",
+  signBorder: "#6b4a29",
+  barTrack: "rgba(0,0,0,0.28)",
+  barFill: "#f0a83f",
+  warning: "#ffcf8a",
 };
 
 export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
@@ -199,75 +217,113 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
     );
   }
 
+  // Same copy as before this cycle — only its container moved, from plain
+  // stacked chrome into the HUD companion card below.
+  const companionCaption = isDistracted
+    ? "Bee stopped working — that pulled focus."
+    : sessionWorkType
+      ? `Filling in ${sessionWorkType.label.toLowerCase()} — right alongside you.`
+      : "Working on it too — right alongside you.";
+
+  const progressPercent = sessionWorkType
+    ? Math.min((currentWorkUnit / sessionWorkType.totalUnits) * 100, 100)
+    : 0;
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
-      <View style={styles.header}>
-        <Text style={styles.elapsed}>
-          {sessionDurationCapSeconds === null
-            ? `${formatElapsed(elapsedSeconds)} elapsed`
-            : `${formatElapsed(Math.max(sessionDurationCapSeconds - elapsedSeconds, 0))} remaining`}
-        </Text>
-      </View>
-
-      <View style={styles.blockedBadge}>
-        <Text style={styles.blockedBadgeLabel}>🔒 Distractions blocked</Text>
-      </View>
-
-      {!isEnforcementActive && (
-        <Pressable onPress={() => BlockingEnforcement.openAccessibilitySettings()} style={styles.enforcementWarning}>
-          <Text style={styles.enforcementWarningText}>Blocking permission is off — tap to turn it back on</Text>
-        </Pressable>
-      )}
-
-      <View style={styles.body}>
-        {stepComplete ? (
-          <Animated.View entering={FadeIn.duration(200)} style={styles.stepCompleteWrap}>
-            <Text style={styles.stepCompleteHeadline}>Done. That&apos;s one more in the bank.</Text>
-            <Text style={styles.stepCompleteMeta}>
-              Step {stepsCompleted} of {totalSteps} · backlog moving
-            </Text>
-          </Animated.View>
-        ) : (
-          currentTask && (
-            <StatCard>
-              <Text style={styles.stepEyebrow}>Doing</Text>
-              <Text style={styles.stepText}>{currentTask.title}</Text>
-            </StatCard>
-          )
-        )}
-
-        <View style={styles.companionWrap}>
-          <Companion
-            state={isDistracted ? "distracted" : "at-work"}
-            caption={
-              isDistracted
-                ? "Bee stopped working — that pulled focus."
-                : sessionWorkType
-                  ? `Filling in ${sessionWorkType.label.toLowerCase()} — right alongside you.`
-                  : "Working on it too — right alongside you."
-            }
-            workProgress={
-              sessionWorkType
-                ? { currentUnit: currentWorkUnit, totalUnits: sessionWorkType.totalUnits }
-                : undefined
-            }
-            workTypeKey={sessionWorkType?.key}
+    <View style={styles.root}>
+      {sessionWorkType && (
+        <View style={StyleSheet.absoluteFill}>
+          <WorkTypeScene
+            workTypeKey={sessionWorkType.key}
+            currentUnit={currentWorkUnit}
+            totalUnits={sessionWorkType.totalUnits}
+            reacting={isDistracted}
             skin={selectedSkin ?? undefined}
           />
         </View>
-      </View>
+      )}
 
-      <View style={styles.footer}>
-        <PrimaryButton
-          label="Done — next step"
-          onPress={handleDone}
-          loading={completingTaskId === currentTask?.id}
-          disabled={!currentTask || stepComplete}
-        />
-        <Pressable onPress={() => setExitOverlayOpen(true)} hitSlop={8} style={styles.exitLink}>
-          <Text style={styles.exitLinkText}>Exit session</Text>
-        </Pressable>
-      </View>
+      <SafeAreaView style={styles.hudSafeArea} edges={["top", "bottom"]} pointerEvents="box-none">
+        <View pointerEvents="box-none">
+          <View style={styles.hudTimerRow} pointerEvents="box-none">
+            <View style={styles.hudPill}>
+              <Text style={styles.hudTimerText}>
+                {sessionDurationCapSeconds === null
+                  ? `${formatElapsed(elapsedSeconds)} elapsed`
+                  : `${formatElapsed(Math.max(sessionDurationCapSeconds - elapsedSeconds, 0))} remaining`}
+              </Text>
+            </View>
+          </View>
+
+          {stepComplete ? (
+            <Animated.View entering={FadeIn.duration(200)} style={[styles.hudPill, styles.hudTaskPill]}>
+              <Text style={styles.hudTaskHeadline}>Done. That&apos;s one more in the bank.</Text>
+              <Text style={styles.hudTaskMeta}>
+                Step {stepsCompleted} of {totalSteps} · backlog moving
+              </Text>
+            </Animated.View>
+          ) : (
+            currentTask && (
+              <View style={[styles.hudPill, styles.hudTaskPill]}>
+                <Text style={styles.hudEyebrow}>Doing</Text>
+                <Text style={styles.hudTaskText}>{currentTask.title}</Text>
+              </View>
+            )
+          )}
+
+          {sessionWorkType && (
+            <View style={styles.hudSign}>
+              <Text style={styles.hudSignLabel}>
+                Building {sessionWorkType.label} — {currentWorkUnit} of {sessionWorkType.totalUnits} cells
+              </Text>
+              <View style={styles.hudSignBarTrack}>
+                <View style={[styles.hudSignBarFill, { width: `${progressPercent}%` }]} />
+              </View>
+            </View>
+          )}
+        </View>
+
+        <View pointerEvents="box-none">
+          <View style={styles.hudStatusRow} pointerEvents="box-none">
+            <View style={styles.hudStatusPill}>
+              <Text style={styles.hudStatusText}>🔒 Distractions blocked</Text>
+            </View>
+          </View>
+
+          {!isEnforcementActive && (
+            <Pressable
+              onPress={() => BlockingEnforcement.openAccessibilitySettings()}
+              style={styles.hudEnforcementWarningRow}
+            >
+              <Text style={styles.hudEnforcementWarningText}>
+                Blocking permission is off — tap to turn it back on
+              </Text>
+            </Pressable>
+          )}
+
+          <View style={styles.hudCompanionRow} pointerEvents="box-none">
+            <View style={styles.hudCompanionCard}>
+              <CompanionAvatar />
+              <View style={styles.hudCompanionTextWrap}>
+                <Text style={styles.hudCompanionName}>Bee</Text>
+                <Text style={styles.hudCompanionLine}>{companionCaption}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.hudFooter}>
+            <PrimaryButton
+              label="Done — next step"
+              onPress={handleDone}
+              loading={completingTaskId === currentTask?.id}
+              disabled={!currentTask || stepComplete}
+            />
+            <Pressable onPress={() => setExitOverlayOpen(true)} hitSlop={8} style={styles.exitLink}>
+              <Text style={styles.hudExitLinkText}>Exit session</Text>
+            </Pressable>
+          </View>
+        </View>
+      </SafeAreaView>
 
       {exitOverlayOpen && (
         <ExitConfirmOverlay
@@ -275,7 +331,20 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
           onConfirmedExit={handleEarlyExit}
         />
       )}
-    </SafeAreaView>
+    </View>
+  );
+}
+
+// A small fixed face, matching the sketch's HUD companion avatar — not
+// theme-reactive, same fixed-palette exception as the rest of the scene.
+function CompanionAvatar() {
+  return (
+    <Svg width={30} height={30} viewBox="0 0 30 30">
+      <Circle cx={15} cy={15} r={15} fill="#f0a83f" />
+      <Circle cx={11} cy={14} r={1.8} fill="#3a2410" />
+      <Circle cx={19} cy={14} r={1.8} fill="#3a2410" />
+      <Path d="M11 19 Q15 22 19 19" stroke="#7a4a1a" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+    </Svg>
   );
 }
 
@@ -331,6 +400,10 @@ function ExitConfirmOverlay({ onKeepGoing, onConfirmedExit }: ExitConfirmOverlay
 
 const createStyles = (colors: IColorTokens) =>
   StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: colors.bg,
+    },
     safeArea: {
       flex: 1,
       backgroundColor: colors.bg,
@@ -347,87 +420,155 @@ const createStyles = (colors: IColorTokens) =>
       fontSize: 15,
       textAlign: "center",
     },
-    header: {
-      flexDirection: "row",
-      justifyContent: "flex-end",
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.md,
+    hudSafeArea: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: "space-between",
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.xs,
+      paddingBottom: spacing.sm,
     },
-    elapsed: {
-      color: colors.textSecondary,
-      fontSize: 13,
-      fontVariant: ["tabular-nums"],
-    },
-    blockedBadge: {
-      alignSelf: "center",
-      backgroundColor: colors.surface,
+    hudPill: {
+      backgroundColor: HUD.pillBg,
       borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 999,
-      paddingVertical: spacing.xxs,
+      borderColor: HUD.pillBorder,
+      borderRadius: 14,
+      paddingVertical: spacing.xs,
       paddingHorizontal: spacing.sm,
-      marginTop: spacing.md,
     },
-    blockedBadgeLabel: {
-      color: colors.textSecondary,
+    hudTimerRow: {
+      alignItems: "flex-end",
+    },
+    hudTimerText: {
+      color: HUD.text,
       fontSize: 12,
       fontWeight: "600",
+      fontVariant: ["tabular-nums"],
     },
-    enforcementWarning: {
-      alignSelf: "center",
+    hudTaskPill: {
       marginTop: spacing.xs,
     },
-    enforcementWarningText: {
-      color: colors.textSecondary,
-      fontSize: 11,
-      textDecorationLine: "underline",
+    hudEyebrow: {
+      color: HUD.textSecondary,
+      fontSize: 10,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      marginBottom: 2,
     },
-    body: {
-      flex: 1,
-      paddingHorizontal: spacing.lg,
-      justifyContent: "center",
-      gap: spacing.xl,
+    hudTaskText: {
+      color: HUD.text,
+      fontSize: 14,
+      fontWeight: "600",
     },
-    stepCompleteWrap: {
-      alignItems: "center",
-      gap: spacing.xs,
-    },
-    stepCompleteHeadline: {
-      color: colors.text,
-      fontSize: 20,
+    hudTaskHeadline: {
+      color: HUD.text,
+      fontSize: 15,
       fontWeight: "700",
       textAlign: "center",
     },
-    stepCompleteMeta: {
-      color: colors.textSecondary,
-      fontSize: 13,
+    hudTaskMeta: {
+      color: HUD.textSecondary,
+      fontSize: 12,
+      textAlign: "center",
+      marginTop: 2,
     },
-    stepEyebrow: {
-      color: colors.textSecondary,
+    hudSign: {
+      alignSelf: "center",
+      marginTop: spacing.sm,
+      minWidth: 190,
+      backgroundColor: HUD.signBg,
+      borderWidth: 2,
+      borderColor: HUD.signBorder,
+      borderRadius: 10,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.md,
+    },
+    hudSignLabel: {
+      color: HUD.text,
+      fontSize: 12,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+    hudSignBarTrack: {
+      marginTop: spacing.xxs,
+      height: 8,
+      borderRadius: 5,
+      backgroundColor: HUD.barTrack,
+      overflow: "hidden",
+    },
+    hudSignBarFill: {
+      height: "100%",
+      backgroundColor: HUD.barFill,
+      borderRadius: 5,
+    },
+    hudStatusRow: {
+      alignItems: "flex-end",
+    },
+    hudStatusPill: {
+      backgroundColor: HUD.pillBg,
+      borderWidth: 1,
+      borderColor: HUD.pillBorder,
+      borderRadius: 999,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+    },
+    hudStatusText: {
+      color: HUD.text,
       fontSize: 11,
       fontWeight: "600",
-      textTransform: "uppercase",
     },
-    stepText: {
-      color: colors.text,
-      fontSize: 20,
-      fontWeight: "700",
+    hudEnforcementWarningRow: {
+      alignSelf: "flex-end",
       marginTop: spacing.xxs,
     },
-    companionWrap: {
-      alignItems: "center",
+    hudEnforcementWarningText: {
+      color: HUD.warning,
+      fontSize: 11,
+      textDecorationLine: "underline",
     },
-    footer: {
-      paddingHorizontal: spacing.lg,
-      paddingBottom: spacing.md,
+    hudCompanionRow: {
+      marginTop: spacing.sm,
+      alignItems: "flex-start",
+    },
+    hudCompanionCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      backgroundColor: HUD.pillBg,
+      borderWidth: 1,
+      borderColor: HUD.pillBorder,
+      borderRadius: 14,
+      paddingVertical: spacing.xxs,
+      paddingHorizontal: spacing.xxs,
+      paddingRight: spacing.sm,
+      maxWidth: 230,
+    },
+    hudCompanionTextWrap: {
+      flexShrink: 1,
+    },
+    hudCompanionName: {
+      color: HUD.text,
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    hudCompanionLine: {
+      color: HUD.textSecondary,
+      fontSize: 10,
+      marginTop: 1,
+    },
+    hudFooter: {
+      marginTop: spacing.sm,
       gap: spacing.sm,
     },
     exitLink: {
       alignItems: "center",
       paddingVertical: spacing.xs,
     },
-    exitLinkText: {
-      color: colors.textSecondary,
+    hudExitLinkText: {
+      color: HUD.textSecondary,
       fontSize: 13,
     },
     overlay: {
