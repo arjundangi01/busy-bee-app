@@ -286,7 +286,9 @@ export function FocusSessionTemplate({ missionId }: FocusSessionTemplateProps) {
         <View pointerEvents="box-none">
           <View style={styles.hudStatusRow} pointerEvents="box-none">
             <View style={styles.hudStatusPill}>
-              <Text style={styles.hudStatusText}>🔒 Distractions blocked</Text>
+              <Text style={[styles.hudStatusText, isDistracted && styles.hudStatusTextWarning]}>
+                {isDistracted ? "⚠️ Focus interrupted" : "🔒 Distractions blocked"}
+              </Text>
             </View>
           </View>
 
@@ -519,6 +521,9 @@ const createStyles = (colors: IColorTokens) =>
       color: HUD.text,
       fontSize: 11,
       fontWeight: "600",
+    },
+    hudStatusTextWarning: {
+      color: HUD.warning,
     },
     hudEnforcementWarningRow: {
       alignSelf: "flex-end",
