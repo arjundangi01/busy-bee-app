@@ -261,11 +261,14 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
       <SafeAreaView style={styles.hudSafeArea} edges={["top", "bottom"]} pointerEvents="box-none">
         <View pointerEvents="box-none">
           <View style={styles.hudTimerRow} pointerEvents="box-none">
-            <View style={styles.hudPill}>
-              <Text style={styles.hudTimerText}>
+            <View style={styles.hudTimerCard}>
+              <Text style={styles.hudTimerEyebrow}>
+                {sessionDurationCapSeconds === null ? "Time elapsed" : "Time remaining"}
+              </Text>
+              <Text style={styles.hudTimerValue}>
                 {sessionDurationCapSeconds === null
-                  ? `${formatElapsed(elapsedSeconds)} elapsed`
-                  : `${formatElapsed(Math.max(sessionDurationCapSeconds - elapsedSeconds, 0))} remaining`}
+                  ? formatElapsed(elapsedSeconds)
+                  : formatElapsed(Math.max(sessionDurationCapSeconds - elapsedSeconds, 0))}
               </Text>
             </View>
           </View>
@@ -282,6 +285,18 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
               <View style={[styles.hudPill, styles.hudTaskPill]}>
                 <Text style={styles.hudEyebrow}>Doing</Text>
                 <Text style={styles.hudTaskText}>{currentTask.title}</Text>
+                {totalSteps > 0 && (
+                  <View style={styles.hudTaskProgressRow}>
+                    <View style={styles.hudTaskProgressTrack}>
+                      <View
+                        style={[styles.hudTaskProgressFill, { width: `${(stepsCompleted / totalSteps) * 100}%` }]}
+                      />
+                    </View>
+                    <Text style={styles.hudTaskProgressLabel}>
+                      Step {stepsCompleted + 1} of {totalSteps}
+                    </Text>
+                  </View>
+                )}
               </View>
             )
           )}
@@ -300,7 +315,7 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
 
         <View pointerEvents="box-none">
           <View style={styles.hudStatusRow} pointerEvents="box-none">
-            <View style={styles.hudStatusPill}>
+            <View style={[styles.hudStatusPill, isDistracted ? styles.hudStatusPillWarning : styles.hudStatusPillActive]}>
               <Text style={[styles.hudStatusText, isDistracted && styles.hudStatusTextWarning]}>
                 {isDistracted ? "⚠️ Focus interrupted" : "🔒 Distractions blocked"}
               </Text>
@@ -459,11 +474,32 @@ const createStyles = (colors: IColorTokens) =>
     hudTimerRow: {
       alignItems: "flex-end",
     },
-    hudTimerText: {
+    // Bigger and more structured than the other HUD pills — same "eyebrow +
+    // one large line" shape as this design system's own Step/Stat Card
+    // pattern (see D-Design-System/components/content/02-step-stat-card.md),
+    // rather than a small inline pill that's easy to lose against the scene.
+    hudTimerCard: {
+      backgroundColor: HUD.pillBg,
+      borderWidth: 1,
+      borderColor: HUD.pillBorder,
+      borderRadius: 16,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.md,
+      alignItems: "flex-end",
+      minWidth: 132,
+    },
+    hudTimerEyebrow: {
+      color: HUD.textSecondary,
+      fontSize: 10,
+      fontWeight: "700",
+      textTransform: "uppercase",
+    },
+    hudTimerValue: {
       color: HUD.text,
-      fontSize: 12,
-      fontWeight: "600",
+      fontSize: 24,
+      fontWeight: "800",
       fontVariant: ["tabular-nums"],
+      marginTop: 1,
     },
     hudTaskPill: {
       marginTop: spacing.xs,
@@ -479,6 +515,32 @@ const createStyles = (colors: IColorTokens) =>
       color: HUD.text,
       fontSize: 14,
       fontWeight: "600",
+    },
+    // Your own progress, shown the same way the bee's build progress is
+    // (label + thin fill bar, same track/fill colors) — so "what you're
+    // doing" reads as forward motion, not just a static label.
+    hudTaskProgressRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      marginTop: spacing.xs,
+    },
+    hudTaskProgressTrack: {
+      flex: 1,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: HUD.barTrack,
+      overflow: "hidden",
+    },
+    hudTaskProgressFill: {
+      height: "100%",
+      backgroundColor: HUD.barFill,
+      borderRadius: 3,
+    },
+    hudTaskProgressLabel: {
+      color: HUD.textSecondary,
+      fontSize: 10,
+      fontWeight: "700",
     },
     hudTaskHeadline: {
       color: HUD.text,
@@ -525,17 +587,27 @@ const createStyles = (colors: IColorTokens) =>
       alignItems: "flex-end",
     },
     hudStatusPill: {
-      backgroundColor: HUD.pillBg,
-      borderWidth: 1,
-      borderColor: HUD.pillBorder,
       borderRadius: 999,
       paddingVertical: spacing.xs,
       paddingHorizontal: spacing.sm,
+      borderWidth: 1.5,
+    },
+    // Deliberately more confident than a plain neutral pill — this is the
+    // one status the user needs to trust is genuinely on, so it gets a
+    // solid gold-tinted fill/border (the same accent used for the bee's own
+    // build-progress fill) rather than blending in with every other pill.
+    hudStatusPillActive: {
+      backgroundColor: "rgba(240,168,63,0.28)",
+      borderColor: HUD.barFill,
+    },
+    hudStatusPillWarning: {
+      backgroundColor: "rgba(255,207,138,0.18)",
+      borderColor: HUD.warning,
     },
     hudStatusText: {
       color: HUD.text,
       fontSize: 11,
-      fontWeight: "600",
+      fontWeight: "700",
     },
     hudStatusTextWarning: {
       color: HUD.warning,
