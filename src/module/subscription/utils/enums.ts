@@ -13,4 +13,8 @@ export enum PAYWALL_ENTRY {
   // companion visuals anywhere on this page — only this entry's headline
   // copy and the new comparison row reference work types at all.
   HIVE_WORK_TYPE = "hiveWorkType",
+  // Bee's Hive — tapping a Pro-locked appearance skin. Same reasoning as
+  // HIVE_WORK_TYPE: appearance variety is a genuine Pro perk, the companion
+  // itself is still never used as a sales visual.
+  HIVE_SKIN = "hiveSkin",
 }

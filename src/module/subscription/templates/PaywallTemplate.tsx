@@ -63,6 +63,12 @@ const getHeadlineCopy = (
         subline: "Pro unlocks Bee's full set of work types in the Hive.",
         confirmationBody: "The full set is unlocked — pick it anytime from the Hive.",
       };
+    case PAYWALL_ENTRY.HIVE_SKIN:
+      return {
+        headline: "This appearance is part of Pro.",
+        subline: "Pro unlocks Bee's full set of appearances in the Hive.",
+        confirmationBody: "The full set is unlocked — pick it anytime from the Hive.",
+      };
     default:
       // entry comes from a route param, not a closed call site — an
       // unrecognized/missing value (bad deep link, stale navigation state)
@@ -124,7 +130,8 @@ const resumeTriggeringContext = (entry: PAYWALL_ENTRY, missionId: string | null)
   if (
     entry === PAYWALL_ENTRY.ANALYTICS ||
     entry === PAYWALL_ENTRY.SETTINGS ||
-    entry === PAYWALL_ENTRY.HIVE_WORK_TYPE
+    entry === PAYWALL_ENTRY.HIVE_WORK_TYPE ||
+    entry === PAYWALL_ENTRY.HIVE_SKIN
   ) {
     router.back();
     return;
@@ -159,7 +166,8 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
     if (
       entry === PAYWALL_ENTRY.ANALYTICS ||
       entry === PAYWALL_ENTRY.SETTINGS ||
-      entry === PAYWALL_ENTRY.HIVE_WORK_TYPE
+      entry === PAYWALL_ENTRY.HIVE_WORK_TYPE ||
+      entry === PAYWALL_ENTRY.HIVE_SKIN
     ) {
       router.back();
       return;

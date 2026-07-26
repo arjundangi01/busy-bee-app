@@ -3,21 +3,27 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { StatCard } from "@/components/content/StatCard";
 import { TopBar } from "@/components/navigation/TopBar";
+import { BeeCharacter } from "@/components/content/companion/BeeCharacter";
 import { useBankedWork } from "@/module/hive/hooks/useBankedWork";
+import { useBeeSkins } from "@/module/hive/hooks/useBeeSkins";
 import { useWorkTypes } from "@/module/focus/hooks/useWorkTypes";
 import { useUpdatePreferences } from "@/module/settings/hooks/useUpdatePreferences";
 import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
+import { routes } from "@/config/routes";
 import { useAuthStore } from "@/store/auth-store";
 import { IColorTokens, spacing, useColors } from "@/theme";
-import { IWorkType } from "@/types";
+import { IBeeSkin, IWorkType } from "@/types";
 
-// design-artifacts/evolution/specs/05-bees-hive.md
+// design-artifacts/evolution/specs/05-bees-hive.md — now a tab-root screen
+// (bee customization tab), not a pushed sub-screen; see 04-home-dashboard-
+// companion-entry.md for the update to its entry-point note.
 export function BeesHiveTemplate() {
   const colors = useColors();
   const styles = createStyles(colors);
   const { user } = useAuthStore();
   const { bankedWork, isLoading: bankedLoading } = useBankedWork();
   const { workTypes, isLoading: workTypesLoading } = useWorkTypes();
+  const { beeSkins, isLoading: skinsLoading } = useBeeSkins();
   const { submit: updatePreferences, isLoading: isSelecting } = useUpdatePreferences();
 
   const handleSelect = (workType: IWorkType) => {
@@ -28,9 +34,17 @@ export function BeesHiveTemplate() {
     updatePreferences({ selectedWorkTypeId: workType.id }).catch(() => undefined);
   };
 
+  const handleSelectSkin = (skin: IBeeSkin) => {
+    if (skin.locked) {
+      router.push({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.HIVE_SKIN } });
+      return;
+    }
+    updatePreferences({ selectedSkinId: skin.id }).catch(() => undefined);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <TopBar variant="sub-screen" title="Bee's Hive" onBack={() => router.back()} />
+      <TopBar variant="tab-root" onAvatarPress={() => router.push(routes.tabs.settings())} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Banked so far</Text>
@@ -87,6 +101,47 @@ export function BeesHiveTemplate() {
                   </Pressable>
                 );
               })
+            )}
+          </StatCard>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Appearance</Text>
+          <StatCard>
+            {skinsLoading ? (
+              <ActivityIndicator color={colors.text} style={styles.spinner} />
+            ) : (
+              <View style={styles.skinGrid}>
+                {beeSkins.map((skin) => {
+                  const isSelected = skin.id === user?.selectedSkinId;
+                  return (
+                    <Pressable
+                      key={skin.id}
+                      onPress={() => handleSelectSkin(skin)}
+                      disabled={isSelecting}
+                      style={[styles.skinTile, isSelected && { borderColor: colors.text }]}
+                      accessibilityRole="button"
+                      accessibilityLabel={skin.locked ? `${skin.label}, requires Pro` : `Select ${skin.label}`}
+                    >
+                      <BeeCharacter
+                        mode="idle"
+                        size={30}
+                        skin={{
+                          bodyPrimary: skin.bodyPrimary,
+                          bodySecondary: skin.bodySecondary,
+                          stripe: skin.stripe,
+                        }}
+                      />
+                      <Text style={styles.skinLabel}>{skin.label}</Text>
+                      {skin.locked ? (
+                        <Text style={styles.proTag}>Pro</Text>
+                      ) : (
+                        isSelected && <Text style={styles.selectedTag}>Current</Text>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
             )}
           </StatCard>
         </View>
@@ -179,5 +234,24 @@ const createStyles = (colors: IColorTokens) =>
       color: colors.textSecondary,
       fontSize: 11,
       fontWeight: "600",
+    },
+    skinGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    skinTile: {
+      alignItems: "center",
+      gap: spacing.xxxs,
+      width: 76,
+      paddingVertical: spacing.sm,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: "transparent",
+    },
+    skinLabel: {
+      color: colors.text,
+      fontSize: 11,
+      textAlign: "center",
     },
   });

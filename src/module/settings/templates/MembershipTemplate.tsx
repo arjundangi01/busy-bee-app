@@ -1,9 +1,3 @@
-import { useEffect, useState } from "react";
-import { Linking, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Constants from "expo-constants";
-import { router } from "expo-router";
-import { PurchasesPackage } from "react-native-purchases";
 import { StatCard } from "@/components/content/StatCard";
 import { TopBar } from "@/components/navigation/TopBar";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
@@ -12,6 +6,19 @@ import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
 import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
 import { IColorTokens, spacing, useColors } from "@/theme";
 import { SUBSCRIPTION_STATUS } from "@/utils/enums";
+import Constants from "expo-constants";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { PurchasesPackage } from "react-native-purchases";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const formatRenewalDate = (isoDate: string): string => {
   const date = new Date(isoDate);
@@ -23,8 +30,11 @@ const openSubscriptionManagement = () => {
     Linking.openURL("https://apps.apple.com/account/subscriptions");
     return;
   }
-  const androidPackage = Constants.expoConfig?.android?.package ?? "com.busybee.app";
-  Linking.openURL(`https://play.google.com/store/account/subscriptions?package=${androidPackage}`);
+  const androidPackage =
+    Constants.expoConfig?.android?.package ?? "com.busybeeapp.app";
+  Linking.openURL(
+    `https://play.google.com/store/account/subscriptions?package=${androidPackage}`,
+  );
 };
 
 export function MembershipTemplate() {
@@ -41,7 +51,11 @@ export function MembershipTemplate() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <TopBar variant="sub-screen" title="Membership" onBack={() => router.back()} />
+      <TopBar
+        variant="sub-screen"
+        title="Membership"
+        onBack={() => router.back()}
+      />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Current plan</Text>
@@ -50,11 +64,17 @@ export function MembershipTemplate() {
               <View style={styles.row}>
                 <View style={styles.rowText}>
                   <Text style={styles.rowLabel}>
-                    Pro{proPackage ? ` · ${proPackage.product.priceString}/month` : ""}
+                    Pro
+                    {proPackage
+                      ? ` · ${proPackage.product.priceString}/month`
+                      : ""}
                   </Text>
                   {expiresAt && (
                     <Text style={styles.rowMeta}>
-                      {status === SUBSCRIPTION_STATUS.CANCELLED ? "Ends" : "Renews"} {formatRenewalDate(expiresAt)}
+                      {status === SUBSCRIPTION_STATUS.CANCELLED
+                        ? "Ends"
+                        : "Renews"}{" "}
+                      {formatRenewalDate(expiresAt)}
                     </Text>
                   )}
                 </View>
@@ -64,8 +84,10 @@ export function MembershipTemplate() {
                 <View style={styles.rowText}>
                   <Text style={styles.rowLabel}>Free plan</Text>
                   <Text style={styles.rowMeta}>
-                    {limits.dailySessionCap !== null ? `${limits.dailySessionCap} sessions/day` : "Limited sessions"} ·
-                    basic analytics
+                    {limits.dailySessionCap !== null
+                      ? `${limits.dailySessionCap} sessions/day`
+                      : "Limited sessions"}{" "}
+                    · basic analytics
                   </Text>
                 </View>
               </View>
@@ -75,7 +97,8 @@ export function MembershipTemplate() {
 
         {isPro && (
           <Text style={styles.manageNote}>
-            Billing and cancellation are handled by the {Platform.OS === "ios" ? "App Store" : "Play Store"} — busy-bee
+            Billing and cancellation are handled by the{" "}
+            {Platform.OS === "ios" ? "App Store" : "Play Store"} — busy-bee
             doesn&apos;t manage payment details directly.
           </Text>
         )}
@@ -83,11 +106,19 @@ export function MembershipTemplate() {
 
       <View style={styles.footer}>
         {isPro ? (
-          <PrimaryButton label="Manage subscription" onPress={openSubscriptionManagement} />
+          <PrimaryButton
+            label="Manage subscription"
+            onPress={openSubscriptionManagement}
+          />
         ) : (
           <PrimaryButton
             label="Compare plans"
-            onPress={() => router.push({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.SETTINGS } })}
+            onPress={() =>
+              router.push({
+                pathname: "/paywall",
+                params: { entry: PAYWALL_ENTRY.SETTINGS },
+              })
+            }
           />
         )}
       </View>
