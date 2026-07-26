@@ -37,13 +37,24 @@ export function HiveEntryReveal({ children }: { children: ReactNode }) {
   }));
 
   return (
-    <View style={styles.fill}>
-      <Animated.View style={[styles.fill, contentStyle]}>{children}</Animated.View>
-      <Animated.View pointerEvents="none" style={[styles.fill, scrimStyle, { backgroundColor: colors.bg }]} />
+    <View style={styles.outer}>
+      <Animated.View style={[StyleSheet.absoluteFill, contentStyle]}>{children}</Animated.View>
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, scrimStyle, { backgroundColor: colors.bg }]}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
+  outer: { flex: 1 },
 });
+
+// Both layers need to overlap (the scrim painted over the content, fading
+// out), not sit side-by-side — StyleSheet.absoluteFill, not flex:1. Two
+// flex:1 siblings in a default column container split the available height
+// between them instead of stacking, which is exactly the bug a real-device
+// test caught here: FocusSessionTemplate only ever received the top half
+// of the screen, with the scrim's transparent bottom half showing the
+// plain app background through as a white gap.
