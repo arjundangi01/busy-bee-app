@@ -1,3 +1,4 @@
+import { HIVE_HUD as HUD } from "@/components/content/companion/hiveHud";
 import { WorkTypeScene } from "@/components/content/companion/WorkTypeScene";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { routes } from "@/config/routes";
@@ -11,6 +12,7 @@ import { useWorkTypes } from "@/module/focus/hooks/useWorkTypes";
 import { FOCUS_SESSION_ERROR_CODE } from "@/module/focus/utils/enums";
 import { computeCurrentWorkUnit } from "@/module/focus/utils/workProgress";
 import { useBeeSkins } from "@/module/hive/hooks/useBeeSkins";
+import { useHiveThemes } from "@/module/hive/hooks/useHiveThemes";
 import { useMission } from "@/module/missions/hooks/useMission";
 import { useBlocklist } from "@/module/settings/hooks/useBlocklist";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
@@ -52,24 +54,6 @@ const formatElapsed = (totalSeconds: number): string => {
   return `${minutes}:${seconds}`;
 };
 
-// Fixed HUD chrome for the illustrated hive-workshop scene — part of the
-// same bounded, non-theme-reactive color exception as the scene itself
-// (evolution/specs/08-focus-session-hive-world-presence.md's Color &
-// Material section): a translucent dark card reads consistently over the
-// warm illustration in either app theme, the way a game HUD would, rather
-// than flipping to a plain white card in light mode.
-const HUD = {
-  pillBg: "rgba(20,14,8,0.62)",
-  pillBorder: "rgba(255,255,255,0.14)",
-  text: "#fff6de",
-  textSecondary: "#e6d9bd",
-  signBg: "#8a6238",
-  signBorder: "#6b4a29",
-  barTrack: "rgba(0,0,0,0.28)",
-  barFill: "#f0a83f",
-  warning: "#ffcf8a",
-};
-
 export function FocusSessionTemplate({
   missionId,
   onSceneReady,
@@ -82,9 +66,12 @@ export function FocusSessionTemplate({
   const { blockedApps } = useBlocklist();
   const { workTypes } = useWorkTypes();
   const { beeSkins } = useBeeSkins();
+  const { hiveThemes } = useHiveThemes();
   const { user } = useAuthStore();
   const selectedSkin =
     beeSkins.find((skin) => skin.id === user?.selectedSkinId) ?? null;
+  const selectedTheme =
+    hiveThemes.find((theme) => theme.id === user?.selectedThemeId) ?? null;
   const sessionDurationCapSeconds = limits.sessionDurationCapSeconds;
 
   const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
@@ -309,6 +296,7 @@ export function FocusSessionTemplate({
             totalUnits={sessionWorkType.totalUnits}
             reacting={isDistracted}
             skin={selectedSkin ?? undefined}
+            theme={selectedTheme ?? undefined}
           />
         </View>
       )}
@@ -386,7 +374,7 @@ export function FocusSessionTemplate({
           ) : (
             currentTask && (
               <View style={[styles.hudPill, styles.hudTaskPill]}>
-                <Text style={styles.hudEyebrow}>Doing</Text>
+                <Text style={styles.hudEyebrow}>You Doing</Text>
                 <Text style={styles.hudTaskText}>{currentTask.title}</Text>
                 {totalSteps > 0 && (
                   <View style={styles.hudTaskProgressRow}>
@@ -629,7 +617,7 @@ const createStyles = (colors: IColorTokens) =>
     },
     hudTaskText: {
       color: HUD.text,
-      fontSize: 14,
+      fontSize: 10,
       fontWeight: "600",
     },
     // Your own progress, shown the same way the bee's build progress is

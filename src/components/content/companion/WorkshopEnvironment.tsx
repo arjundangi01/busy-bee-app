@@ -1,3 +1,4 @@
+import { useId } from "react";
 import Svg, {
   Circle,
   Defs,
@@ -17,6 +18,33 @@ import { STAGE_CANVAS_HEIGHT, STAGE_CANVAS_WIDTH } from "@/components/content/co
 // doesn't invert for light/dark, unlike everywhere else in the app.
 // Self-scaling (percentage width/height + "slice"), so unlike the cells/
 // bee/spark overlaid on top of it, this needs no onLayout math of its own.
+
+// Bee's Hive environment/scene customization (evolution/specs/
+// 09-bees-hive-illustrated-redesign.md) — flat hex colors consumed
+// directly, no client-side derivation, same precedent as BeeCharacter's
+// BeeSkin prop. DEFAULT_THEME is today's original hardcoded palette
+// (== the seeded "Golden Hour" row), so "no theme selected" and "Golden
+// Hour selected" render pixel-identically.
+export type HiveThemePalette = {
+  skyTop: string;
+  skyBottom: string;
+  wallTop: string;
+  wallBottom: string;
+  floorTop: string;
+  floorBottom: string;
+  lanternGlow: string;
+};
+
+const DEFAULT_THEME: HiveThemePalette = {
+  skyTop: "#bfe3f7",
+  skyBottom: "#eaf6e0",
+  wallTop: "#6b4a2c",
+  wallBottom: "#4a3018",
+  floorTop: "#8a6238",
+  floorBottom: "#5c3f21",
+  lanternGlow: "#ffe9ad",
+};
+
 type WorkshopEnvironmentProps = {
   // honeycomb-block crate + hex blueprint read as honeycomb-specific set
   // dressing — swapped out for a plainer shelf detail on the flower variant
@@ -24,9 +52,21 @@ type WorkshopEnvironmentProps = {
   // flower-specific set dressing is the same follow-on art pass the spec
   // already scopes the flower structure's fidelity into.
   variant: "honeycomb" | "flower";
+  // Undefined falls back to DEFAULT_THEME above — same "undefined = default"
+  // convention as BeeCharacter's `skin` prop.
+  theme?: HiveThemePalette;
 };
 
-export function WorkshopEnvironment({ variant }: WorkshopEnvironmentProps) {
+export function WorkshopEnvironment({ variant, theme }: WorkshopEnvironmentProps) {
+  const t = theme ?? DEFAULT_THEME;
+  // Every caller used to render at most one WorkshopEnvironment on screen at
+  // a time, so fixed literal gradient ids never collided. The Bee's Hive
+  // theme picker now renders several instances simultaneously (a hero
+  // preview + multiple theme tiles) — namespace every <Defs> id per
+  // instance so react-native-svg can't resolve a `url(#...)` reference
+  // against a sibling instance's gradient.
+  const uid = useId();
+
   return (
     <Svg
       width="100%"
@@ -35,31 +75,31 @@ export function WorkshopEnvironment({ variant }: WorkshopEnvironmentProps) {
       preserveAspectRatio="xMidYMid slice"
     >
       <Defs>
-        <LinearGradient id="wsWallGrad" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor="#6b4a2c" />
-          <Stop offset="100%" stopColor="#4a3018" />
+        <LinearGradient id={`wsWallGrad${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor={t.wallTop} />
+          <Stop offset="100%" stopColor={t.wallBottom} />
         </LinearGradient>
-        <LinearGradient id="wsFloorGrad" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor="#8a6238" />
-          <Stop offset="100%" stopColor="#5c3f21" />
+        <LinearGradient id={`wsFloorGrad${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor={t.floorTop} />
+          <Stop offset="100%" stopColor={t.floorBottom} />
         </LinearGradient>
-        <LinearGradient id="wsSkyGrad" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor="#bfe3f7" />
-          <Stop offset="100%" stopColor="#eaf6e0" />
+        <LinearGradient id={`wsSkyGrad${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor={t.skyTop} />
+          <Stop offset="100%" stopColor={t.skyBottom} />
         </LinearGradient>
-        <LinearGradient id="wsCellFlatGrad" x1="0" y1="0" x2="1" y2="1">
+        <LinearGradient id={`wsCellFlatGrad${uid}`} x1="0" y1="0" x2="1" y2="1">
           <Stop offset="0%" stopColor="#c99a5c" />
           <Stop offset="100%" stopColor="#8a6337" />
         </LinearGradient>
-        <RadialGradient id="wsLanternGlow" cx="50%" cy="50%" r="50%">
-          <Stop offset="0%" stopColor="#ffe9ad" stopOpacity={0.9} />
-          <Stop offset="100%" stopColor="#ffe9ad" stopOpacity={0} />
+        <RadialGradient id={`wsLanternGlow${uid}`} cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor={t.lanternGlow} stopOpacity={0.9} />
+          <Stop offset="100%" stopColor={t.lanternGlow} stopOpacity={0} />
         </RadialGradient>
       </Defs>
 
       {/* walls + floor */}
-      <Rect x={0} y={0} width={STAGE_CANVAS_WIDTH} height={STAGE_CANVAS_HEIGHT} fill="url(#wsWallGrad)" />
-      <Path d="M0 480 L300 470 L300 650 L0 650 Z" fill="url(#wsFloorGrad)" />
+      <Rect x={0} y={0} width={STAGE_CANVAS_WIDTH} height={STAGE_CANVAS_HEIGHT} fill={`url(#wsWallGrad${uid})`} />
+      <Path d="M0 480 L300 470 L300 650 L0 650 Z" fill={`url(#wsFloorGrad${uid})`} />
       <Path d="M0 480 L300 470" stroke="#3a2712" strokeWidth={3} />
       <G stroke="#5c3f21" strokeWidth={1.5} opacity={0.5}>
         <Path d="M40 650 L46 480" />
@@ -78,7 +118,7 @@ export function WorkshopEnvironment({ variant }: WorkshopEnvironmentProps) {
 
       {/* window to garden */}
       <G transform="translate(58,150)">
-        <Ellipse cx={0} cy={0} rx={52} ry={66} fill="url(#wsSkyGrad)" />
+        <Ellipse cx={0} cy={0} rx={52} ry={66} fill={`url(#wsSkyGrad${uid})`} />
         <Circle cx={-18} cy={24} r={16} fill="#6fae55" />
         <Circle cx={10} cy={30} r={20} fill="#5f9948" />
         <Circle cx={-4} cy={10} r={14} fill="#79ba60" />
@@ -107,9 +147,9 @@ export function WorkshopEnvironment({ variant }: WorkshopEnvironmentProps) {
           {/* crate of finished honeycomb blocks */}
           <G transform="translate(232,538)">
             <Rect x={-40} y={0} width={80} height={46} rx={4} fill="#7a5230" stroke="#3a2712" strokeWidth={2} />
-            <Rect x={-32} y={-10} width={18} height={18} rx={2} fill="url(#wsCellFlatGrad)" stroke="#7a4f12" />
-            <Rect x={-10} y={-14} width={18} height={18} rx={2} fill="url(#wsCellFlatGrad)" stroke="#7a4f12" />
-            <Rect x={12} y={-9} width={18} height={18} rx={2} fill="url(#wsCellFlatGrad)" stroke="#7a4f12" />
+            <Rect x={-32} y={-10} width={18} height={18} rx={2} fill={`url(#wsCellFlatGrad${uid})`} stroke="#7a4f12" />
+            <Rect x={-10} y={-14} width={18} height={18} rx={2} fill={`url(#wsCellFlatGrad${uid})`} stroke="#7a4f12" />
+            <Rect x={12} y={-9} width={18} height={18} rx={2} fill={`url(#wsCellFlatGrad${uid})`} stroke="#7a4f12" />
           </G>
 
           {/* blueprint on wall */}
@@ -144,7 +184,7 @@ export function WorkshopEnvironment({ variant }: WorkshopEnvironmentProps) {
       {/* hanging lantern (static — ambient flicker deferred to the follow-on art pass) */}
       <G transform="translate(258,64)">
         <Path d="M0 -30 L0 0" stroke="#3a2712" strokeWidth={2} />
-        <Circle r={20} fill="url(#wsLanternGlow)" />
+        <Circle r={20} fill={`url(#wsLanternGlow${uid})`} />
         <Rect x={-10} y={0} width={20} height={24} rx={4} fill="#2b1d10" stroke="#4a3018" strokeWidth={1.5} />
         <Circle cx={0} cy={12} r={6} fill="#ffe19c" />
       </G>

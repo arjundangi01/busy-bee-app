@@ -24,7 +24,7 @@ const LAYOUT_CONFIG = { originX: 196, originY: 290, columns: 5, colSpacing: 30, 
 // (a distinct bloom illustration, its own structure metaphor) is scoped as
 // follow-on work — this pass gives it the same full-screen/HUD/motion
 // treatment as Honeycomb rather than leaving it on the old small fill-grid.
-export function FlowerFieldScene({ currentUnit, totalUnits, reacting, skin }: WorkTypeSceneProps) {
+export function FlowerFieldScene({ currentUnit, totalUnits, reacting, skin, theme }: WorkTypeSceneProps) {
   const stage = useWorkshopStageLayout();
   const positions = getCellLayout(totalUnits, LAYOUT_CONFIG);
   const hasCurrentBloom = currentUnit < totalUnits;
@@ -32,7 +32,7 @@ export function FlowerFieldScene({ currentUnit, totalUnits, reacting, skin }: Wo
 
   return (
     <View style={StyleSheet.absoluteFill} onLayout={stage.onLayout}>
-      <WorkshopEnvironment variant="flower" />
+      <WorkshopEnvironment variant="flower" theme={theme} />
       <FlowerBed positions={positions} currentUnit={currentUnit} totalUnits={totalUnits} />
 
       {stage.ready && currentPosition && (

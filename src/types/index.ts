@@ -21,6 +21,7 @@ export type IUser = {
   bio: string | null;
   selectedWorkTypeId: string | null;
   selectedSkinId: string | null;
+  selectedThemeId: string | null;
   accessibilityPrimingShown: boolean;
 };
 
@@ -46,6 +47,21 @@ export type IBeeSkin = {
   bodyPrimary: string;
   bodySecondary: string;
   stripe: string;
+  locked: boolean;
+};
+
+export type IHiveTheme = {
+  id: string;
+  key: string;
+  label: string;
+  tier: "FREE" | "PRO";
+  skyTop: string;
+  skyBottom: string;
+  wallTop: string;
+  wallBottom: string;
+  floorTop: string;
+  floorBottom: string;
+  lanternGlow: string;
   locked: boolean;
 };
 

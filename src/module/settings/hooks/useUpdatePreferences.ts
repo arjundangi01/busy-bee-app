@@ -18,6 +18,9 @@ type IUpdatePreferencesPayload = {
   // Bee customization tab — same PATCH /auth/me endpoint handles the
   // appearance pick too.
   selectedSkinId?: string;
+  // Bee's Hive environment/scene customization — same PATCH /auth/me
+  // endpoint handles the theme pick too.
+  selectedThemeId?: string;
   // One-way flag — see design-artifacts/evolution/specs/06-permission-priming.md.
   accessibilityPrimingShown?: boolean;
 };

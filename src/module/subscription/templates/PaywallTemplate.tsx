@@ -6,6 +6,7 @@ import { PurchasesPackage } from "react-native-purchases";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
 import { useWorkTypes } from "@/module/focus/hooks/useWorkTypes";
+import { useHiveThemes } from "@/module/hive/hooks/useHiveThemes";
 import { getProPackage, isPurchasesConfigured, purchasePackage } from "@/lib/purchases";
 import { FALLBACK_PRO_PRICE_LABEL } from "@/module/subscription/utils/constants";
 import { formatDurationCap } from "@/module/subscription/utils/formatLimits";
@@ -68,6 +69,12 @@ const getHeadlineCopy = (
         subline: "Pro unlocks Bee's full set of appearances in the Hive.",
         confirmationBody: "The full set is unlocked — pick it anytime from the Hive.",
       };
+    case PAYWALL_ENTRY.HIVE_THEME:
+      return {
+        headline: "This theme is part of Pro.",
+        subline: "Pro unlocks Bee's full set of hive themes.",
+        confirmationBody: "The full set is unlocked — pick it anytime from the Hive.",
+      };
     default:
       // entry comes from a route param, not a closed call site — an
       // unrecognized/missing value (bad deep link, stale navigation state)
@@ -101,6 +108,7 @@ const getBenefits = (limits: IPlanLimits): { title: string; description: string 
 const getComparisonRows = (
   limits: IPlanLimits,
   freeWorkTypeCount: number,
+  freeThemeCount: number,
 ): { label: string; free: string; pro: string }[] => [
   {
     label: "Sessions per day",
@@ -119,6 +127,9 @@ const getComparisonRows = (
   // yet (content pass, deferred) — "Full set" avoids implying a specific
   // number that would currently be misleadingly equal to Free's.
   { label: "Bee's work types", free: `${freeWorkTypeCount} starters`, pro: "Full set" },
+  // Sourced from the real hive-theme registry (useHiveThemes) — same
+  // convention as the row above.
+  { label: "Hive themes", free: `${freeThemeCount} starters`, pro: "Full set" },
 ];
 
 const resumeTriggeringContext = (entry: PAYWALL_ENTRY, missionId: string | null) => {
@@ -130,7 +141,8 @@ const resumeTriggeringContext = (entry: PAYWALL_ENTRY, missionId: string | null)
     entry === PAYWALL_ENTRY.ANALYTICS ||
     entry === PAYWALL_ENTRY.SETTINGS ||
     entry === PAYWALL_ENTRY.HIVE_WORK_TYPE ||
-    entry === PAYWALL_ENTRY.HIVE_SKIN
+    entry === PAYWALL_ENTRY.HIVE_SKIN ||
+    entry === PAYWALL_ENTRY.HIVE_THEME
   ) {
     router.back();
     return;
@@ -143,6 +155,7 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
   const styles = createStyles(colors);
   const { limits, refresh: refreshEntitlement } = useEntitlement();
   const { workTypes } = useWorkTypes();
+  const { hiveThemes } = useHiveThemes();
 
   const [state, setState] = useState<PageState>("default");
   const [proPackage, setProPackage] = useState<PurchasesPackage | null>(null);
@@ -155,7 +168,8 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
   const copy = getHeadlineCopy(entry, limits);
   const benefits = getBenefits(limits);
   const freeWorkTypeCount = workTypes.filter((workType) => workType.tier === "FREE").length;
-  const comparisonRows = getComparisonRows(limits, freeWorkTypeCount);
+  const freeThemeCount = hiveThemes.filter((theme) => theme.tier === "FREE").length;
+  const comparisonRows = getComparisonRows(limits, freeWorkTypeCount, freeThemeCount);
   const priceLabel = proPackage
     ? `${proPackage.product.priceString}/month · billed monthly · cancel anytime`
     : FALLBACK_PRO_PRICE_LABEL;
@@ -165,7 +179,8 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
       entry === PAYWALL_ENTRY.ANALYTICS ||
       entry === PAYWALL_ENTRY.SETTINGS ||
       entry === PAYWALL_ENTRY.HIVE_WORK_TYPE ||
-      entry === PAYWALL_ENTRY.HIVE_SKIN
+      entry === PAYWALL_ENTRY.HIVE_SKIN ||
+      entry === PAYWALL_ENTRY.HIVE_THEME
     ) {
       router.back();
       return;

@@ -79,9 +79,19 @@ type HiveEntryRevealProps = {
   // Capped by MAX_WAIT_MS regardless, so a slow/failed load can't strand
   // the user behind clouds forever.
   ready: boolean;
+  // Both default to Focus Session's original copy — Bee's Hive (a second
+  // caller of this same component) passes its own, e.g. "Entering the
+  // Hive" / "Bee's tidying up the workshop."
+  headline?: string;
+  subcopy?: string;
 };
 
-export function HiveEntryReveal({ children, ready }: HiveEntryRevealProps) {
+export function HiveEntryReveal({
+  children,
+  ready,
+  headline = "Entering the hive",
+  subcopy = "Your bee's warming up the workshop.",
+}: HiveEntryRevealProps) {
   const progress = useSharedValue(0);
   const sway = useSharedValue(0);
   const finishedRef = useRef(false);
@@ -155,8 +165,8 @@ export function HiveEntryReveal({ children, ready }: HiveEntryRevealProps) {
 
         <View style={styles.centerWrap}>
           <Animated.View style={textStyle}>
-            <Text style={styles.headline}>Entering the hive</Text>
-            <Text style={styles.subcopy}>Your bee&apos;s warming up the workshop.</Text>
+            <Text style={styles.headline}>{headline}</Text>
+            <Text style={styles.subcopy}>{subcopy}</Text>
           </Animated.View>
           <Animated.View style={[styles.barTrack, textStyle]}>
             <Animated.View style={[styles.barFill, barFillStyle]} />

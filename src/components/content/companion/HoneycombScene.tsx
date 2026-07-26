@@ -26,7 +26,7 @@ const LAYOUT_CONFIG = { originX: 196, originY: 205, columns: 3, colSpacing: 46, 
 // composited on top as separately-animated Views positioned via
 // useWorkshopStageLayout so they land exactly where the background art was
 // scaled/cropped to, on any real device size.
-export function HoneycombScene({ currentUnit, totalUnits, reacting, skin }: WorkTypeSceneProps) {
+export function HoneycombScene({ currentUnit, totalUnits, reacting, skin, theme }: WorkTypeSceneProps) {
   const stage = useWorkshopStageLayout();
   const positions = getCellLayout(totalUnits, LAYOUT_CONFIG);
   const hasCurrentCell = currentUnit < totalUnits;
@@ -34,7 +34,7 @@ export function HoneycombScene({ currentUnit, totalUnits, reacting, skin }: Work
 
   return (
     <View style={StyleSheet.absoluteFill} onLayout={stage.onLayout}>
-      <WorkshopEnvironment variant="honeycomb" />
+      <WorkshopEnvironment variant="honeycomb" theme={theme} />
       <HoneycombWall positions={positions} currentUnit={currentUnit} totalUnits={totalUnits} />
 
       {stage.ready && currentPosition && (

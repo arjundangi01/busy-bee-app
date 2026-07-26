@@ -1,6 +1,7 @@
 import { HoneycombScene } from "@/components/content/companion/HoneycombScene";
 import { FlowerFieldScene } from "@/components/content/companion/FlowerFieldScene";
 import type { BeeSkin } from "@/components/content/companion/BeeCharacter";
+import type { HiveThemePalette } from "@/components/content/companion/WorkshopEnvironment";
 
 // design-artifacts/evolution/specs/03-companion-work-types.md — one scene
 // component per work type, keyed by the backend WorkType registry's stable
@@ -14,6 +15,9 @@ export type WorkTypeSceneProps = {
   // The user's selected Bee's Hive appearance skin — undefined falls back
   // to BeeCharacter's own default colors.
   skin?: BeeSkin;
+  // The user's selected Bee's Hive environment theme — undefined falls back
+  // to WorkshopEnvironment's own default (Golden Hour) palette.
+  theme?: HiveThemePalette;
 };
 
 type SceneComponent = (props: WorkTypeSceneProps) => React.JSX.Element;

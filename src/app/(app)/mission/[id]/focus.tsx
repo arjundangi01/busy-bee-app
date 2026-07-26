@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { HiveEntryReveal } from "@/module/focus/components/HiveEntryReveal";
+import { HiveEntryReveal } from "@/components/shared/HiveEntryReveal";
 import { FocusSessionTemplate } from "@/module/focus/templates/FocusSessionTemplate";
 
 export default function FocusSessionScreen() {

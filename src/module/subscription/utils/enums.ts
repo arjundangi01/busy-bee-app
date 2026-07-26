@@ -17,4 +17,7 @@ export enum PAYWALL_ENTRY {
   // HIVE_WORK_TYPE: appearance variety is a genuine Pro perk, the companion
   // itself is still never used as a sales visual.
   HIVE_SKIN = "hiveSkin",
+  // Bee's Hive — tapping a Pro-locked environment theme. Same reasoning as
+  // HIVE_WORK_TYPE/HIVE_SKIN: environment variety is a genuine Pro perk.
+  HIVE_THEME = "hiveTheme",
 }
