@@ -1,7 +1,26 @@
+import { WorkTypeScene } from "@/components/content/companion/WorkTypeScene";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { routes } from "@/config/routes";
+import { getErrorCode, getErrorMessage } from "@/lib/utils/errors";
+import { useBlockingEnforcement } from "@/module/focus/hooks/useBlockingEnforcement";
+import {
+  fetchActiveFocusSession,
+  useFocusSession,
+} from "@/module/focus/hooks/useFocusSession";
+import { useWorkTypes } from "@/module/focus/hooks/useWorkTypes";
+import { FOCUS_SESSION_ERROR_CODE } from "@/module/focus/utils/enums";
+import { computeCurrentWorkUnit } from "@/module/focus/utils/workProgress";
+import { useBeeSkins } from "@/module/hive/hooks/useBeeSkins";
+import { useMission } from "@/module/missions/hooks/useMission";
+import { useBlocklist } from "@/module/settings/hooks/useBlocklist";
+import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
+import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
+import { useAuthStore } from "@/store/auth-store";
+import { IColorTokens, spacing, useColors } from "@/theme";
+import { SESSION_END_REASON, TASK_STATUS } from "@/utils/enums";
+import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import Animated, {
   FadeIn,
   runOnJS,
@@ -9,25 +28,9 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Path } from "react-native-svg";
 import * as BlockingEnforcement from "../../../../modules/blocking-enforcement";
-import { WorkTypeScene } from "@/components/content/companion/WorkTypeScene";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { useMission } from "@/module/missions/hooks/useMission";
-import { fetchActiveFocusSession, useFocusSession } from "@/module/focus/hooks/useFocusSession";
-import { useBlockingEnforcement } from "@/module/focus/hooks/useBlockingEnforcement";
-import { useWorkTypes } from "@/module/focus/hooks/useWorkTypes";
-import { useBeeSkins } from "@/module/hive/hooks/useBeeSkins";
-import { useAuthStore } from "@/store/auth-store";
-import { FOCUS_SESSION_ERROR_CODE } from "@/module/focus/utils/enums";
-import { computeCurrentWorkUnit } from "@/module/focus/utils/workProgress";
-import { useBlocklist } from "@/module/settings/hooks/useBlocklist";
-import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
-import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
-import { routes } from "@/config/routes";
-import { getErrorCode, getErrorMessage } from "@/lib/utils/errors";
-import { IColorTokens, spacing, useColors } from "@/theme";
-import { SESSION_END_REASON, TASK_STATUS } from "@/utils/enums";
 
 const HOLD_DURATION_MS = 1500;
 
@@ -67,7 +70,10 @@ const HUD = {
   warning: "#ffcf8a",
 };
 
-export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTemplateProps) {
+export function FocusSessionTemplate({
+  missionId,
+  onSceneReady,
+}: FocusSessionTemplateProps) {
   const colors = useColors();
   const styles = createStyles(colors);
   const { mission, completeTask, completingTaskId } = useMission(missionId);
@@ -77,11 +83,14 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
   const { workTypes } = useWorkTypes();
   const { beeSkins } = useBeeSkins();
   const { user } = useAuthStore();
-  const selectedSkin = beeSkins.find((skin) => skin.id === user?.selectedSkinId) ?? null;
+  const selectedSkin =
+    beeSkins.find((skin) => skin.id === user?.selectedSkinId) ?? null;
   const sessionDurationCapSeconds = limits.sessionDurationCapSeconds;
 
   const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
-  const [sessionWorkTypeId, setSessionWorkTypeId] = useState<string | null>(null);
+  const [sessionWorkTypeId, setSessionWorkTypeId] = useState<string | null>(
+    null,
+  );
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [stepComplete, setStepComplete] = useState(false);
   const [exitOverlayOpen, setExitOverlayOpen] = useState(false);
@@ -95,7 +104,8 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
 
   // The session's own server-assigned work type (not re-derived from user
   // prefs client-side) — single source of truth, set once start() resolves.
-  const sessionWorkType = workTypes.find((workType) => workType.id === sessionWorkTypeId) ?? null;
+  const sessionWorkType =
+    workTypes.find((workType) => workType.id === sessionWorkTypeId) ?? null;
   const currentWorkUnit = sessionWorkType
     ? computeCurrentWorkUnit(elapsedSeconds, sessionWorkType.totalUnits)
     : 0;
@@ -116,7 +126,14 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
         // Seed from the server's startedAt rather than assuming 0 — matters
         // when adopting an already-running session (see SESSION_ALREADY_ACTIVE
         // below), and is simply more correct for a fresh session too.
-        setElapsedSeconds(Math.max(0, Math.round((Date.now() - new Date(session.startedAt).getTime()) / 1000)));
+        setElapsedSeconds(
+          Math.max(
+            0,
+            Math.round(
+              (Date.now() - new Date(session.startedAt).getTime()) / 1000,
+            ),
+          ),
+        );
       })
       .catch(async (error) => {
         const code = getErrorCode(error);
@@ -132,7 +149,14 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
           if (active) {
             setFocusSessionId(active.id);
             setSessionWorkTypeId(active.workTypeId);
-            setElapsedSeconds(Math.max(0, Math.round((Date.now() - new Date(active.startedAt).getTime()) / 1000)));
+            setElapsedSeconds(
+              Math.max(
+                0,
+                Math.round(
+                  (Date.now() - new Date(active.startedAt).getTime()) / 1000,
+                ),
+              ),
+            );
             return;
           }
           // The active session ended between the failed start() and this
@@ -145,7 +169,10 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
         if (code === FOCUS_SESSION_ERROR_CODE.SESSION_CAP_REACHED) {
           // Tapping Start is a fresh, deliberate action each time — always
           // show the paywall rather than remembering an earlier dismissal.
-          router.replace({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.SESSION_CAP, missionId } });
+          router.replace({
+            pathname: "/paywall",
+            params: { entry: PAYWALL_ENTRY.SESSION_CAP, missionId },
+          });
           return;
         }
 
@@ -156,7 +183,10 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
 
   useEffect(() => {
     if (startError) return;
-    const interval = setInterval(() => setElapsedSeconds((prev) => prev + 1), 1000);
+    const interval = setInterval(
+      () => setElapsedSeconds((prev) => prev + 1),
+      1000,
+    );
     return () => clearInterval(interval);
   }, [startError]);
 
@@ -165,13 +195,24 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
     // and the brief window before entitlement data loads — either way there's
     // nothing to enforce yet, and real elapsed time never approaches a real
     // cap within that short loading window.
-    if (sessionDurationCapSeconds === null || !focusSessionId || timeLimitHandledRef.current) return;
+    if (
+      sessionDurationCapSeconds === null ||
+      !focusSessionId ||
+      timeLimitHandledRef.current
+    )
+      return;
     if (elapsedSeconds < sessionDurationCapSeconds) return;
 
     timeLimitHandledRef.current = true;
-    end({ focusSessionId, sessionEndReason: SESSION_END_REASON.TIME_LIMIT_REACHED }).then(() => {
+    end({
+      focusSessionId,
+      sessionEndReason: SESSION_END_REASON.TIME_LIMIT_REACHED,
+    }).then(() => {
       BlockingEnforcement.clearActiveSession();
-      router.replace({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.SESSION_TIME_LIMIT } });
+      router.replace({
+        pathname: "/paywall",
+        params: { entry: PAYWALL_ENTRY.SESSION_TIME_LIMIT },
+      });
     });
   }, [sessionDurationCapSeconds, focusSessionId, elapsedSeconds, end]);
 
@@ -183,7 +224,10 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
     }
   }, [startError, sessionWorkType, onSceneReady]);
 
-  const goToSessionComplete = (completedCount: number, distractionsBlocked: number) => {
+  const goToSessionComplete = (
+    completedCount: number,
+    distractionsBlocked: number,
+  ) => {
     router.replace({
       pathname: "/mission/[id]/complete",
       params: {
@@ -202,21 +246,29 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
     const newStepsCompleted = stepsCompleted + 1;
     setStepsCompleted(newStepsCompleted);
 
-    const nextPending = updated?.tasks.find((task) => task.status === TASK_STATUS.PENDING);
+    const nextPending = updated?.tasks.find(
+      (task) => task.status === TASK_STATUS.PENDING,
+    );
     if (nextPending) {
       setStepComplete(true);
       setTimeout(() => setStepComplete(false), 1200);
       return;
     }
 
-    const session = await end({ focusSessionId, sessionEndReason: SESSION_END_REASON.MISSION_COMPLETED });
+    const session = await end({
+      focusSessionId,
+      sessionEndReason: SESSION_END_REASON.MISSION_COMPLETED,
+    });
     BlockingEnforcement.clearActiveSession();
     goToSessionComplete(newStepsCompleted, session.blockedAttemptCount);
   };
 
   const handleEarlyExit = async () => {
     if (!focusSessionId) return;
-    await end({ focusSessionId, sessionEndReason: SESSION_END_REASON.EARLY_EXIT });
+    await end({
+      focusSessionId,
+      sessionEndReason: SESSION_END_REASON.EARLY_EXIT,
+    });
     BlockingEnforcement.clearActiveSession();
     router.replace(routes.tabs.home());
   };
@@ -226,7 +278,10 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
       <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
         <View style={styles.startErrorWrap}>
           <Text style={styles.startErrorText}>{startError}</Text>
-          <PrimaryButton label="Back to Home" onPress={() => router.replace(routes.tabs.home())} />
+          <PrimaryButton
+            label="Back to Home"
+            onPress={() => router.replace(routes.tabs.home())}
+          />
         </View>
       </SafeAreaView>
     );
@@ -258,24 +313,72 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
         </View>
       )}
 
-      <SafeAreaView style={styles.hudSafeArea} edges={["top", "bottom"]} pointerEvents="box-none">
+      <SafeAreaView
+        style={styles.hudSafeArea}
+        edges={["top", "bottom"]}
+        pointerEvents="box-none"
+      >
         <View pointerEvents="box-none">
-          <View style={styles.hudTimerRow} pointerEvents="box-none">
-            <View style={styles.hudTimerCard}>
-              <Text style={styles.hudTimerEyebrow}>
-                {sessionDurationCapSeconds === null ? "Time elapsed" : "Time remaining"}
-              </Text>
-              <Text style={styles.hudTimerValue}>
-                {sessionDurationCapSeconds === null
-                  ? formatElapsed(elapsedSeconds)
-                  : formatElapsed(Math.max(sessionDurationCapSeconds - elapsedSeconds, 0))}
-              </Text>
+          <View style={styles.hudTopRow}>
+            <View style={styles.hudStatusRow} pointerEvents="box-none">
+              <View
+                style={[
+                  styles.hudStatusPill,
+                  isDistracted
+                    ? styles.hudStatusPillWarning
+                    : styles.hudStatusPillActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.hudStatusText,
+                    isDistracted && styles.hudStatusTextWarning,
+                  ]}
+                >
+                  {isDistracted
+                    ? "⚠️ Focus interrupted"
+                    : "🔒 Distractions blocked"}
+                </Text>
+              </View>
+            </View>
+
+            {!isEnforcementActive && (
+              <Pressable
+                onPress={() => BlockingEnforcement.openAccessibilitySettings()}
+                style={styles.hudEnforcementWarningRow}
+              >
+                <Text style={styles.hudEnforcementWarningText}>
+                  Blocking permission is off — tap to turn it back on
+                </Text>
+              </Pressable>
+            )}
+
+            <View style={styles.hudTimerRow} pointerEvents="box-none">
+              <View style={styles.hudTimerCard}>
+                <Text style={styles.hudTimerEyebrow}>
+                  {sessionDurationCapSeconds === null
+                    ? "Time elapsed"
+                    : "Time remaining"}
+                </Text>
+                <Text style={styles.hudTimerValue}>
+                  {sessionDurationCapSeconds === null
+                    ? formatElapsed(elapsedSeconds)
+                    : formatElapsed(
+                        Math.max(sessionDurationCapSeconds - elapsedSeconds, 0),
+                      )}
+                </Text>
+              </View>
             </View>
           </View>
 
           {stepComplete ? (
-            <Animated.View entering={FadeIn.duration(200)} style={[styles.hudPill, styles.hudTaskPill]}>
-              <Text style={styles.hudTaskHeadline}>Done. That&apos;s one more in the bank.</Text>
+            <Animated.View
+              entering={FadeIn.duration(200)}
+              style={[styles.hudPill, styles.hudTaskPill]}
+            >
+              <Text style={styles.hudTaskHeadline}>
+                Done. That&apos;s one more in the bank.
+              </Text>
               <Text style={styles.hudTaskMeta}>
                 Step {stepsCompleted} of {totalSteps} · backlog moving
               </Text>
@@ -289,7 +392,10 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
                   <View style={styles.hudTaskProgressRow}>
                     <View style={styles.hudTaskProgressTrack}>
                       <View
-                        style={[styles.hudTaskProgressFill, { width: `${(stepsCompleted / totalSteps) * 100}%` }]}
+                        style={[
+                          styles.hudTaskProgressFill,
+                          { width: `${(stepsCompleted / totalSteps) * 100}%` },
+                        ]}
                       />
                     </View>
                     <Text style={styles.hudTaskProgressLabel}>
@@ -304,35 +410,22 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
           {sessionWorkType && (
             <View style={styles.hudSign}>
               <Text style={styles.hudSignLabel}>
-                Building {sessionWorkType.label} — {currentWorkUnit} of {sessionWorkType.totalUnits} cells
+                Building {sessionWorkType.label} — {currentWorkUnit} of{" "}
+                {sessionWorkType.totalUnits} cells
               </Text>
               <View style={styles.hudSignBarTrack}>
-                <View style={[styles.hudSignBarFill, { width: `${progressPercent}%` }]} />
+                <View
+                  style={[
+                    styles.hudSignBarFill,
+                    { width: `${progressPercent}%` },
+                  ]}
+                />
               </View>
             </View>
           )}
         </View>
 
         <View pointerEvents="box-none">
-          <View style={styles.hudStatusRow} pointerEvents="box-none">
-            <View style={[styles.hudStatusPill, isDistracted ? styles.hudStatusPillWarning : styles.hudStatusPillActive]}>
-              <Text style={[styles.hudStatusText, isDistracted && styles.hudStatusTextWarning]}>
-                {isDistracted ? "⚠️ Focus interrupted" : "🔒 Distractions blocked"}
-              </Text>
-            </View>
-          </View>
-
-          {!isEnforcementActive && (
-            <Pressable
-              onPress={() => BlockingEnforcement.openAccessibilitySettings()}
-              style={styles.hudEnforcementWarningRow}
-            >
-              <Text style={styles.hudEnforcementWarningText}>
-                Blocking permission is off — tap to turn it back on
-              </Text>
-            </Pressable>
-          )}
-
           <View style={styles.hudCompanionRow} pointerEvents="box-none">
             <View style={styles.hudCompanionCard}>
               <CompanionAvatar />
@@ -350,7 +443,11 @@ export function FocusSessionTemplate({ missionId, onSceneReady }: FocusSessionTe
               loading={completingTaskId === currentTask?.id}
               disabled={!currentTask || stepComplete}
             />
-            <Pressable onPress={() => setExitOverlayOpen(true)} hitSlop={8} style={styles.exitLink}>
+            <Pressable
+              onPress={() => setExitOverlayOpen(true)}
+              hitSlop={8}
+              style={styles.exitLink}
+            >
               <Text style={styles.hudExitLinkText}>Exit session</Text>
             </Pressable>
           </View>
@@ -375,7 +472,13 @@ function CompanionAvatar() {
       <Circle cx={15} cy={15} r={15} fill="#f0a83f" />
       <Circle cx={11} cy={14} r={1.8} fill="#3a2410" />
       <Circle cx={19} cy={14} r={1.8} fill="#3a2410" />
-      <Path d="M11 19 Q15 22 19 19" stroke="#7a4a1a" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+      <Path
+        d="M11 19 Q15 22 19 19"
+        stroke="#7a4a1a"
+        strokeWidth={1.5}
+        fill="none"
+        strokeLinecap="round"
+      />
     </Svg>
   );
 }
@@ -385,7 +488,10 @@ type ExitConfirmOverlayProps = {
   onConfirmedExit: () => void;
 };
 
-function ExitConfirmOverlay({ onKeepGoing, onConfirmedExit }: ExitConfirmOverlayProps) {
+function ExitConfirmOverlay({
+  onKeepGoing,
+  onConfirmedExit,
+}: ExitConfirmOverlayProps) {
   const colors = useColors();
   const styles = createStyles(colors);
   const fill = useSharedValue(0);
@@ -407,9 +513,12 @@ function ExitConfirmOverlay({ onKeepGoing, onConfirmedExit }: ExitConfirmOverlay
   return (
     <View style={styles.overlay}>
       <View style={styles.overlayCard}>
-        <Text style={styles.overlayQuestion}>Ending now stops the block early.</Text>
+        <Text style={styles.overlayQuestion}>
+          Ending now stops the block early.
+        </Text>
         <Text style={styles.overlaySubcopy}>
-          Your streak isn&apos;t affected — this session just won&apos;t count toward today&apos;s backlog.
+          Your streak isn&apos;t affected — this session just won&apos;t count
+          toward today&apos;s backlog.
         </Text>
 
         <Pressable
@@ -435,6 +544,13 @@ const createStyles = (colors: IColorTokens) =>
     root: {
       flex: 1,
       backgroundColor: colors.bg,
+    },
+    hudTopRow: {
+      width: "100%",
+      gap: spacing.md,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
     },
     safeArea: {
       flex: 1,
