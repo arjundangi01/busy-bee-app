@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      Special app-op permission, not a normal runtime-requestable one — no
+      system prompt exists for it. The user must grant "Usage access" for
+      this app manually via Settings (ACTION_USAGE_ACCESS_SETTINGS), same
+      mechanical shape as blocking-enforcement's accessibility-service grant.
+      tools:ignore="ProtectedPermissions" silences the lint warning this
+      manifest declaration otherwise triggers, since that's expected here.
+    -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!--
+      Android 11+ package visibility, same reasoning as installed-apps'
+      identical <queries> declaration — without it, PackageManager can only
+      resolve this app's own package when looking up app names/launch
+      intents for the packages UsageStatsManager reports.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+</manifest>

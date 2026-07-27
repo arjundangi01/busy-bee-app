@@ -4,6 +4,7 @@ import { StatCard } from "@/components/content/StatCard";
 import { useAuthStore } from "@/store/auth-store";
 import { IColorTokens, spacing, useColors } from "@/theme";
 import * as BlockingEnforcement from "../../../../modules/blocking-enforcement";
+import * as UsageStats from "../../../../modules/usage-stats";
 
 type PermissionRowProps = {
   label: string;
@@ -50,12 +51,17 @@ export function PermissionsSection() {
   // that the user leaves this exact screen, grants it in system Settings,
   // and comes right back; a mount-only check would still show it as off.
   const [isAccessibilityEnabled, setIsAccessibilityEnabled] = useState<boolean | null>(null);
+  // Same "never stored server-side, checked live every foreground return"
+  // reasoning as the accessibility row above — usage access is another
+  // special app-op the user can flip in system Settings at any time.
+  const [isUsageAccessEnabled, setIsUsageAccessEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (Platform.OS !== "android") return;
 
     const checkStatus = () => {
       BlockingEnforcement.isAccessibilityServiceEnabled().then(setIsAccessibilityEnabled);
+      UsageStats.isUsageAccessGranted().then(setIsUsageAccessEnabled);
     };
 
     checkStatus();
@@ -88,6 +94,14 @@ export function PermissionsSection() {
             granted={isAccessibilityEnabled}
             offConsequence="Blocked apps won't actually be stopped during a session"
             onFixPress={() => BlockingEnforcement.openAccessibilitySettings()}
+          />
+        )}
+        {Platform.OS === "android" && (
+          <PermissionRow
+            label="Usage access"
+            granted={isUsageAccessEnabled}
+            offConsequence="Screen Time and Device Activity on Progress won't have real data"
+            onFixPress={() => UsageStats.openUsageAccessSettings()}
             isLast
           />
         )}

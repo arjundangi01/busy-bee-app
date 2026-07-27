@@ -1,14 +1,25 @@
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LabelValueRow } from "@/components/content/LabelValueRow";
 import { StatCard } from "@/components/content/StatCard";
 import { TopBar } from "@/components/navigation/TopBar";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { DeviceActivityRow } from "@/module/progress/components/DeviceActivityRow";
+import { ScreenTimeAppRow } from "@/module/progress/components/ScreenTimeAppRow";
 import { Sparkline } from "@/module/progress/components/Sparkline";
 import { StreakCalendar } from "@/module/progress/components/StreakCalendar";
+import { UsageAccessPrompt } from "@/module/progress/components/UsageAccessPrompt";
 import { WeeklyBarChart } from "@/module/progress/components/WeeklyBarChart";
+import { useIngestUsageStats } from "@/module/progress/hooks/useIngestUsageStats";
 import { useProgress } from "@/module/progress/hooks/useProgress";
+import { useUsageAccessStatus } from "@/module/progress/hooks/useUsageAccessStatus";
+import {
+  avgMinutesSinceLocalMidnight,
+  computeDeltaDisplay,
+  formatClockTime,
+  minutesSinceLocalMidnight,
+} from "@/module/progress/utils/deviceActivityDelta";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
 import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
 import { routes } from "@/config/routes";
@@ -17,6 +28,14 @@ import { IColorTokens, spacing, useColors } from "@/theme";
 import { IFocusWindow } from "@/types";
 
 const NOT_ENOUGH_DATA_YET = "Not enough data yet";
+const SCREEN_TIME_APP_LIMIT = 5;
+// Free-tier locked preview shows these real row labels faded behind the
+// lock — the "real shape, not generic decoration" the spec calls for —
+// without ever rendering a Free user's actual numbers (or a fabricated
+// stand-in) under it.
+const DEVICE_ACTIVITY_ROW_LABELS = ["Phone pickups", "Offline time", "First pickup", "Last pickup", "Distractions", "Sleep"];
+
+const formatDurationDelta = (seconds: number): string => formatMinutesAsHoursAndMinutes(Math.round(seconds / 60));
 
 const formatFocusWindow = ({ startHour, endHour }: IFocusWindow): string => {
   const period = (hour: number) => (hour >= 12 ? "pm" : "am");
@@ -29,6 +48,8 @@ export function ProgressTemplate() {
   const styles = createStyles(colors);
   const { progress, isLoading, isRefetching, error, refresh } = useProgress();
   const { isPro } = useEntitlement();
+  const isUsageAccessGranted = useUsageAccessStatus();
+  useIngestUsageStats();
 
   if (isLoading && !progress) {
     return (
@@ -52,6 +73,9 @@ export function ProgressTemplate() {
   if (!progress) {
     return null;
   }
+
+  const screenTimeApps = progress.screenTime?.apps ?? [];
+  const screenTimeMaxSeconds = screenTimeApps[0]?.foregroundSeconds ?? 0;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -155,7 +179,43 @@ export function ProgressTemplate() {
           />
         </StatCard>
 
-        {!isPro && (
+        {Platform.OS === "android" && (
+          <StatCard>
+            <Text style={styles.sectionLabel}>Screen Time</Text>
+            {isUsageAccessGranted === false ? (
+              <UsageAccessPrompt />
+            ) : progress.screenTime === null ? (
+              <Text style={styles.emptyText}>{NOT_ENOUGH_DATA_YET}</Text>
+            ) : (
+              <>
+                <Text style={styles.reclaimedValue}>
+                  {formatMinutesAsHoursAndMinutes(Math.round(progress.screenTime.totalForegroundSeconds / 60))}{" "}
+                  <Text style={styles.reclaimedUnit}>today</Text>
+                </Text>
+                {screenTimeApps.slice(0, SCREEN_TIME_APP_LIMIT).map((app) => (
+                  <ScreenTimeAppRow
+                    key={app.packageName}
+                    appName={app.appName}
+                    foregroundSeconds={app.foregroundSeconds}
+                    isBlocked={app.isBlocked}
+                    maxForegroundSeconds={screenTimeMaxSeconds}
+                  />
+                ))}
+                {screenTimeApps.length > SCREEN_TIME_APP_LIMIT && (
+                  <Text style={styles.moreAppsText}>+{screenTimeApps.length - SCREEN_TIME_APP_LIMIT} more</Text>
+                )}
+                <View style={styles.legendRow}>
+                  <View style={[styles.legendDot, { backgroundColor: colors.danger }]} />
+                  <Text style={styles.legendText}>On your blocklist</Text>
+                  <View style={[styles.legendDot, styles.legendDotSpaced, { backgroundColor: colors.textSecondary }]} />
+                  <Text style={styles.legendText}>Everything else</Text>
+                </View>
+              </>
+            )}
+          </StatCard>
+        )}
+
+        {Platform.OS === "android" && !isPro && (
           <Pressable
             onPress={() => router.push({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.ANALYTICS } })}
             style={styles.lockedPanel}
@@ -163,16 +223,102 @@ export function ProgressTemplate() {
             accessibilityLabel="Locked. Advanced analytics is a Pro feature."
           >
             <View style={styles.lockedPreview} importantForAccessibility="no-hide-descendants">
-              <View style={[styles.lockedBar, { width: "78%" }]} />
-              <View style={[styles.lockedBar, { width: "52%" }]} />
-              <View style={[styles.lockedBar, { width: "64%" }]} />
+              <Text style={styles.sectionLabel}>Device Activity</Text>
+              {DEVICE_ACTIVITY_ROW_LABELS.map((label) => (
+                <Text key={label} style={styles.lockedRowLabel}>
+                  {label}
+                </Text>
+              ))}
             </View>
             <View style={styles.lockedOverlay}>
               <Text style={styles.lockedIcon}>🔒</Text>
               <Text style={styles.lockedHeadline}>Advanced analytics</Text>
-              <Text style={styles.lockedBody}>Hourly breakdowns and full detail — unlock with Pro</Text>
+              <Text style={styles.lockedBody}>Pickups, offline time & sleep, unlocked with Pro</Text>
             </View>
           </Pressable>
+        )}
+
+        {Platform.OS === "android" && isPro && (
+          <StatCard>
+            <Text style={styles.sectionLabel}>Device Activity</Text>
+            {isUsageAccessGranted === false ? (
+              <UsageAccessPrompt />
+            ) : progress.deviceActivity === null ? (
+              <Text style={styles.emptyText}>{NOT_ENOUGH_DATA_YET}</Text>
+            ) : (
+              <>
+                <DeviceActivityRow
+                  label="Phone pickups"
+                  value={`${progress.deviceActivity.pickupCount.value}`}
+                  delta={computeDeltaDisplay(
+                    progress.deviceActivity.pickupCount.value,
+                    progress.deviceActivity.pickupCount.avg7d,
+                    false,
+                    "aboveBelowAverage",
+                    (magnitude) => `${magnitude}`,
+                  )}
+                />
+                <DeviceActivityRow
+                  label="Offline time"
+                  value={formatDurationDelta(progress.deviceActivity.offlineSeconds.value)}
+                  delta={computeDeltaDisplay(
+                    progress.deviceActivity.offlineSeconds.value,
+                    progress.deviceActivity.offlineSeconds.avg7d,
+                    true,
+                    "aboveBelowAverage",
+                    formatDurationDelta,
+                  )}
+                />
+                {progress.deviceActivity.firstPickupAt && (
+                  <DeviceActivityRow
+                    label="First pickup"
+                    value={formatClockTime(progress.deviceActivity.firstPickupAt)}
+                    delta={computeDeltaDisplay(
+                      minutesSinceLocalMidnight(progress.deviceActivity.firstPickupAt),
+                      avgMinutesSinceLocalMidnight(progress.deviceActivity.priorFirstPickupAts),
+                      true,
+                      "laterEarlierThanUsual",
+                      formatMinutesAsHoursAndMinutes,
+                    )}
+                  />
+                )}
+                {progress.deviceActivity.lastPickupAt && (
+                  <DeviceActivityRow
+                    label="Last pickup"
+                    value={formatClockTime(progress.deviceActivity.lastPickupAt)}
+                    delta={computeDeltaDisplay(
+                      minutesSinceLocalMidnight(progress.deviceActivity.lastPickupAt),
+                      avgMinutesSinceLocalMidnight(progress.deviceActivity.priorLastPickupAts),
+                      false,
+                      "laterEarlierThanUsual",
+                      formatMinutesAsHoursAndMinutes,
+                    )}
+                  />
+                )}
+                <DeviceActivityRow
+                  label="Distractions"
+                  value={formatDurationDelta(progress.deviceActivity.distractionsSeconds.value)}
+                  delta={computeDeltaDisplay(
+                    progress.deviceActivity.distractionsSeconds.value,
+                    progress.deviceActivity.distractionsSeconds.avg7d,
+                    false,
+                    "aboveBelowAverage",
+                    formatDurationDelta,
+                    "time on blocklisted apps",
+                  )}
+                />
+                <View style={styles.sleepRow}>
+                  <View style={styles.headerRowInline}>
+                    <Text style={styles.label}>Sleep</Text>
+                    <Text style={styles.value}>Not tracked yet</Text>
+                  </View>
+                  <Text style={styles.sleepCaption}>
+                    Needs its own HealthKit/Health Connect integration — not part of this module.
+                  </Text>
+                </View>
+              </>
+            )}
+          </StatCard>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -272,10 +418,9 @@ const createStyles = (colors: IColorTokens) =>
       padding: spacing.lg,
       gap: spacing.sm,
     },
-    lockedBar: {
-      height: 10,
-      borderRadius: 999,
-      backgroundColor: colors.surfaceAlt,
+    lockedRowLabel: {
+      color: colors.text,
+      fontSize: 13,
     },
     lockedOverlay: {
       position: "absolute",
@@ -310,5 +455,54 @@ const createStyles = (colors: IColorTokens) =>
     },
     retryButton: {
       width: "100%",
+    },
+    emptyText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+    },
+    moreAppsText: {
+      color: colors.textMuted,
+      fontSize: 11,
+      marginTop: spacing.xxs,
+    },
+    legendRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: spacing.sm,
+    },
+    legendDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 999,
+    },
+    legendDotSpaced: {
+      marginLeft: spacing.sm,
+    },
+    legendText: {
+      color: colors.textMuted,
+      fontSize: 10.5,
+      marginLeft: spacing.xxs,
+    },
+    sleepRow: {
+      paddingVertical: spacing.sm,
+    },
+    headerRowInline: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "baseline",
+    },
+    label: {
+      color: colors.textSecondary,
+      fontSize: 13,
+    },
+    value: {
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    sleepCaption: {
+      color: colors.textFaint,
+      fontSize: 10.5,
+      marginTop: spacing.xxs,
     },
   });

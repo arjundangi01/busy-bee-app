@@ -1,0 +1,9 @@
+{
+  "name": "usage-stats",
+  "version": "1.0.0",
+  "description": "Local Expo module — reads Android's UsageStatsManager for per-app screen time and pickup/offline-time device activity (Insights/Data Dashboard Track 2).",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}

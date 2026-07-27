@@ -175,6 +175,33 @@ export type ITopDistraction = {
   count: number;
 };
 
+export type IUsageMetric = {
+  value: number;
+  avg7d: number | null;
+};
+
+export type IScreenTimeAppRow = {
+  packageName: string;
+  appName: string;
+  foregroundSeconds: number;
+  isBlocked: boolean;
+};
+
+export type IScreenTime = {
+  totalForegroundSeconds: number;
+  apps: IScreenTimeAppRow[];
+} | null;
+
+export type IDeviceActivity = {
+  pickupCount: IUsageMetric;
+  offlineSeconds: IUsageMetric;
+  distractionsSeconds: IUsageMetric;
+  firstPickupAt: string | null;
+  lastPickupAt: string | null;
+  priorFirstPickupAts: string[];
+  priorLastPickupAts: string[];
+} | null;
+
 export type IProgress = {
   currentStreakDays: number;
   bestStreakDays: number;
@@ -193,5 +220,7 @@ export type IProgress = {
   bounceBackRatePercent: number | null;
   missionCompletionRatePercent: number | null;
   stepCompletionRatePercent: number | null;
+  screenTime: IScreenTime;
+  deviceActivity: IDeviceActivity;
   isColdStart: boolean;
 };
