@@ -95,6 +95,7 @@ export type IMission = {
   progressPercent: number;
   tasks: IMissionTask[];
   nextTask: IMissionTask | null;
+  hasActiveSession: boolean;
 };
 
 export type IMissionPlan = {

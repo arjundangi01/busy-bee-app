@@ -8,6 +8,7 @@ import { MinuteStepper } from "@/module/missions/components/MinuteStepper";
 import { TaskRow } from "@/module/missions/components/TaskRow";
 import { useMission } from "@/module/missions/hooks/useMission";
 import { MISSION_ERROR_CODE } from "@/module/missions/utils/enums";
+import { getMissionCapStatus } from "@/module/missions/utils/planLimits";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
 import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
 import { getErrorCode, getErrorMessage } from "@/lib/utils/errors";
@@ -47,13 +48,14 @@ export function MissionDetailTemplate({ missionId }: MissionDetailTemplateProps)
   const [addError, setAddError] = useState<string | null>(null);
 
   const totalMinutesUsed = mission?.tasks.reduce((sum, task) => sum + (task.estimatedMinutes ?? 0), 0) ?? 0;
-  const remainingMinutesBudget =
-    limits.maxMissionMinutes !== null ? Math.max(0, limits.maxMissionMinutes - totalMinutesUsed) : null;
-  const isAtTaskCap =
-    !isPro && limits.maxTasksPerMission !== null && (mission?.tasks.length ?? 0) >= limits.maxTasksPerMission;
-  const isAtTimeBudget = !isPro && remainingMinutesBudget !== null && remainingMinutesBudget <= 0;
-  const isAtCap = isAtTaskCap || isAtTimeBudget;
+  const { isAtTaskCap, isAtCap, remainingMinutesBudget } = getMissionCapStatus(
+    mission?.tasks.length ?? 0,
+    totalMinutesUsed,
+    limits,
+    isPro,
+  );
   const stepperMax = isPro ? UNCAPPED_MAX_TASK_MINUTES : Math.max(5, remainingMinutesBudget ?? UNCAPPED_MAX_TASK_MINUTES);
+  const isLocked = mission?.hasActiveSession ?? false;
 
   const goToTaskLimitPaywall = (reason: "count" | "time") => {
     router.push({
@@ -153,13 +155,18 @@ export function MissionDetailTemplate({ missionId }: MissionDetailTemplateProps)
                 canMoveDown={index < mission.tasks.length - 1}
                 onMoveUp={() => moveTask(index, -1)}
                 onMoveDown={() => moveTask(index, 1)}
+                isLocked={isLocked}
               />
             ))}
           </View>
 
           {isReordering && <Text style={styles.reorderingHint}>Saving new order…</Text>}
 
-          {isAdding ? (
+          {isLocked ? (
+            <View style={styles.addTaskRow}>
+              <Text style={styles.addTaskText}>Editing is locked while a focus session is in progress</Text>
+            </View>
+          ) : isAdding ? (
             <View style={styles.addForm}>
               <TextInput
                 value={newTaskTitle}

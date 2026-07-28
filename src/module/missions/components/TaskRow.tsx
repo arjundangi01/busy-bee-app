@@ -14,6 +14,11 @@ type TaskRowProps = {
   canMoveDown: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  // True while the mission has a real, active focus session — rename/
+  // reorder are blocked server-side in that state, so this hides those
+  // affordances proactively instead of only failing after a tap. Completing
+  // a task is unaffected — that's the normal mid-session flow.
+  isLocked?: boolean;
 };
 
 // Editing/reordering can't share the old "whole row is one Pressable for
@@ -29,6 +34,7 @@ export function TaskRow({
   canMoveDown,
   onMoveUp,
   onMoveDown,
+  isLocked,
 }: TaskRowProps) {
   const colors = useColors();
   const styles = createStyles(colors);
@@ -78,7 +84,7 @@ export function TaskRow({
             returnKeyType="done"
           />
         ) : (
-          <Pressable onPress={startEditing} disabled={isSaving} hitSlop={4}>
+          <Pressable onPress={startEditing} disabled={isSaving || isLocked} hitSlop={4}>
             <Text style={[styles.title, isDone && styles.titleDone]}>{task.title}</Text>
           </Pressable>
         )}
@@ -87,7 +93,7 @@ export function TaskRow({
         )}
       </View>
 
-      {!isEditing && (
+      {!isEditing && !isLocked && (
         <View style={styles.reorderButtons}>
           <Pressable
             onPress={onMoveUp}

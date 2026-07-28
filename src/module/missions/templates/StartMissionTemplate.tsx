@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRef, useState } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -10,13 +10,17 @@ import { GlowOrb } from "@/components/ui/GlowOrb";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { TextField } from "@/components/ui/TextField";
 import { FocusTimerDial, formatDuration } from "@/module/missions/components/FocusTimerDial";
-import { MissionPathList } from "@/module/missions/components/MissionPathList";
+import { IDraftStep, MissionPathList } from "@/module/missions/components/MissionPathList";
+import { MinuteStepper } from "@/module/missions/components/MinuteStepper";
 import { useCreateMission } from "@/module/missions/hooks/useCreateMission";
 import { useMissionPlan } from "@/module/missions/hooks/useMissionPlan";
+import { MISSION_ERROR_CODE } from "@/module/missions/utils/enums";
+import { getMissionCapStatus } from "@/module/missions/utils/planLimits";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
+import { PAYWALL_ENTRY } from "@/module/subscription/utils/enums";
 import { routes } from "@/config/routes";
+import { getErrorCode, getErrorMessage } from "@/lib/utils/errors";
 import { IColorTokens, spacing, useColors } from "@/theme";
-import { IMissionPlan } from "@/types";
 
 type FlowState = "input" | "thinking" | "ready" | "error";
 
@@ -24,18 +28,24 @@ const MIN_FOCUS_MINUTES = 5;
 // Ceiling used when the caller's plan has no hard cap (Pro) — the picker
 // still needs some usable upper bound even though the plan itself doesn't.
 const UNCAPPED_MAX_MINUTES = 8 * 60;
+const DEFAULT_NEW_STEP_MINUTES = 15;
+const UNCAPPED_MAX_STEP_MINUTES = 8 * 60;
 
 export function StartMissionTemplate() {
   const colors = useColors();
   const styles = createStyles(colors);
   const [state, setState] = useState<FlowState>("input");
   const [taskText, setTaskText] = useState("");
-  const [planResult, setPlanResult] = useState<IMissionPlan | null>(null);
-  const [showFullPlan, setShowFullPlan] = useState(true);
+  const [steps, setSteps] = useState<IDraftStep[]>([]);
   const [focusMinutes, setFocusMinutes] = useState(MIN_FOCUS_MINUTES);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [isAddingStep, setIsAddingStep] = useState(false);
+  const [newStepTitle, setNewStepTitle] = useState("");
+  const [newStepMinutes, setNewStepMinutes] = useState(DEFAULT_NEW_STEP_MINUTES);
+  const nextStepIdRef = useRef(0);
 
   const { plan, error: planError } = useMissionPlan();
-  const { create, isLoading: isCreating } = useCreateMission();
+  const { create, isLoading: isCreating, addExtraTask, finalizeOrder } = useCreateMission();
   const { isPro, limits } = useEntitlement();
 
   const capMinutes =
@@ -43,22 +53,47 @@ export function StartMissionTemplate() {
       ? Math.floor(limits.sessionDurationCapSeconds / 60)
       : UNCAPPED_MAX_MINUTES;
 
+  const totalStepMinutes = steps.reduce((sum, step) => sum + step.minutes, 0);
+
   // Free plan's cap is worth surfacing on its own, not just implied by the
   // dial's max — and needs its own copy when a task's real estimate ran
   // past it, so the clamp doesn't read as the AI just being wrong.
-  const estimateExceedsCap = !isPro && (planResult?.estimatedMinutes ?? 0) > capMinutes;
+  const estimateExceedsCap = !isPro && totalStepMinutes > capMinutes;
   const timerHint = isPro
     ? `Adjustable up to ${formatDuration(capMinutes)}`
     : estimateExceedsCap
       ? `This one runs longer than the free ${formatDuration(capMinutes)} limit — capped for now.`
       : `Free plan — sessions cap at ${formatDuration(capMinutes)}.`;
 
+  const { isAtTaskCap, isAtCap, remainingMinutesBudget } = getMissionCapStatus(
+    steps.length,
+    totalStepMinutes,
+    limits,
+    isPro,
+  );
+  const addStepMax = isPro ? UNCAPPED_MAX_STEP_MINUTES : Math.max(5, remainingMinutesBudget ?? UNCAPPED_MAX_STEP_MINUTES);
+
+  const makeStepId = () => {
+    nextStepIdRef.current += 1;
+    return `draft-${nextStepIdRef.current}`;
+  };
+
   const requestPlan = async () => {
     setState("thinking");
     try {
       const result = await plan({ taskText: taskText.trim() });
-      setPlanResult(result);
-      setShowFullPlan(true);
+      const initialSteps: IDraftStep[] = [
+        { id: makeStepId(), title: result.nextStep, minutes: result.nextStepMinutes, isAiGenerated: true },
+        ...result.remainingSteps.map((title, index) => ({
+          id: makeStepId(),
+          title,
+          minutes: result.remainingStepsMinutes[index],
+          isAiGenerated: true,
+        })),
+      ];
+      setSteps(initialSteps);
+      setIsAddingStep(false);
+      setStartError(null);
       // Seeded from the AI's own realistic estimate, then user-adjustable —
       // never a flat default.
       setFocusMinutes(Math.min(capMinutes, Math.max(MIN_FOCUS_MINUTES, result.estimatedMinutes)));
@@ -68,20 +103,95 @@ export function StartMissionTemplate() {
     }
   };
 
-  const handleStart = async () => {
-    if (!planResult) return;
-    const mission = await create({
-      taskText: taskText.trim(),
-      nextStep: planResult.nextStep,
-      nextStepMinutes: planResult.nextStepMinutes,
-      remainingSteps: planResult.remainingSteps,
-      remainingStepsMinutes: planResult.remainingStepsMinutes,
-      focusMinutes,
+  const goToTaskLimitPaywall = (reason: "count" | "time") => {
+    router.push({
+      pathname: "/paywall",
+      params: { entry: PAYWALL_ENTRY.MISSION_TASK_LIMIT, reason },
     });
-    router.replace(routes.focusSession(mission.id));
   };
 
-  const totalSteps = planResult ? planResult.remainingSteps.length + 1 : 0;
+  const renameStep = (index: number, title: string) => {
+    setSteps((prev) => prev.map((step, i) => (i === index ? { ...step, title } : step)));
+  };
+
+  const moveStep = (index: number, direction: -1 | 1) => {
+    setSteps((prev) => {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[newIndex]] = [next[newIndex], next[index]];
+      return next;
+    });
+  };
+
+  const openAddStep = () => {
+    if (isAtCap) {
+      goToTaskLimitPaywall(isAtTaskCap ? "count" : "time");
+      return;
+    }
+    setNewStepTitle("");
+    setNewStepMinutes(Math.min(DEFAULT_NEW_STEP_MINUTES, addStepMax));
+    setIsAddingStep(true);
+  };
+
+  const confirmAddStep = () => {
+    const title = newStepTitle.trim();
+    if (title.length === 0) return;
+    setSteps((prev) => [...prev, { id: makeStepId(), title, minutes: newStepMinutes, isAiGenerated: false }]);
+    setIsAddingStep(false);
+    setNewStepTitle("");
+  };
+
+  const handleStart = async () => {
+    if (steps.length === 0) return;
+    setStartError(null);
+
+    const aiSteps = steps.filter((step) => step.isAiGenerated);
+    const userSteps = steps.filter((step) => !step.isAiGenerated);
+
+    try {
+      const mission = await create({
+        taskText: taskText.trim(),
+        nextStep: aiSteps[0].title,
+        nextStepMinutes: aiSteps[0].minutes,
+        remainingSteps: aiSteps.slice(1).map((step) => step.title),
+        remainingStepsMinutes: aiSteps.slice(1).map((step) => step.minutes),
+        focusMinutes,
+      });
+
+      const persistedIdByDraftId = new Map<string, string>();
+      aiSteps.forEach((step, index) => persistedIdByDraftId.set(step.id, mission.tasks[index].id));
+
+      let latestMission = mission;
+      for (const step of userSteps) {
+        latestMission = await addExtraTask({ missionId: mission.id, title: step.title, estimatedMinutes: step.minutes });
+        persistedIdByDraftId.set(step.id, latestMission.tasks[latestMission.tasks.length - 1].id);
+      }
+
+      // Only needed if a user-added step ended up somewhere other than
+      // "appended at the end" — reordering among only-AI steps is already
+      // reflected correctly by aiSteps' own order above.
+      if (userSteps.length > 0) {
+        await finalizeOrder({
+          missionId: mission.id,
+          taskIds: steps.map((step) => persistedIdByDraftId.get(step.id)!),
+        });
+      }
+
+      router.replace(routes.focusSession(mission.id));
+    } catch (error) {
+      const code = getErrorCode(error);
+      if (code === MISSION_ERROR_CODE.TASK_LIMIT_REACHED) {
+        goToTaskLimitPaywall("count");
+        return;
+      }
+      if (code === MISSION_ERROR_CODE.TIME_BUDGET_EXCEEDED) {
+        goToTaskLimitPaywall("time");
+        return;
+      }
+      setStartError(getErrorMessage(error));
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
@@ -115,13 +225,13 @@ export function StartMissionTemplate() {
             </View>
           )}
 
-          {state === "ready" && planResult && (
+          {state === "ready" && steps.length > 0 && (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.resultSection}>
               <Text style={styles.resultTitle}>{taskText}</Text>
 
               <StatCard>
                 <Text style={styles.stepEyebrow}>Start with</Text>
-                <Text style={styles.stepText}>{planResult.nextStep}</Text>
+                <Text style={styles.stepText}>{steps[0].title}</Text>
               </StatCard>
 
               <FocusTimerDial
@@ -134,21 +244,54 @@ export function StartMissionTemplate() {
               />
 
               <View>
-                <View style={styles.pathHeader}>
-                  <Text style={styles.pathSummary}>
-                    {totalSteps} {totalSteps === 1 ? "step" : "steps"} · about {planResult.estimatedMinutes} min
-                  </Text>
-                  {planResult.remainingSteps.length > 0 && (
-                    <Pressable onPress={() => setShowFullPlan((prev) => !prev)} hitSlop={8}>
-                      <Text style={styles.planToggle}>{showFullPlan ? "Hide path ‹" : "View path ›"}</Text>
-                    </Pressable>
-                  )}
-                </View>
+                <Text style={styles.pathSummary}>
+                  {steps.length} {steps.length === 1 ? "step" : "steps"} · about {totalStepMinutes} min
+                </Text>
 
-                {planResult.remainingSteps.length > 0 && showFullPlan && (
-                  <MissionPathList steps={[planResult.nextStep, ...planResult.remainingSteps]} />
+                <MissionPathList steps={steps} onRename={renameStep} onMoveUp={(i) => moveStep(i, -1)} onMoveDown={(i) => moveStep(i, 1)} />
+
+                {isAddingStep ? (
+                  <View style={styles.addForm}>
+                    <TextInput
+                      value={newStepTitle}
+                      onChangeText={setNewStepTitle}
+                      placeholder="What's the next step?"
+                      placeholderTextColor={colors.textFaint}
+                      style={styles.addInput}
+                      autoFocus
+                    />
+                    <View style={styles.addFormRow}>
+                      <MinuteStepper valueMinutes={newStepMinutes} onChange={setNewStepMinutes} maxMinutes={addStepMax} />
+                      <View style={styles.addFormActions}>
+                        <Pressable onPress={() => setIsAddingStep(false)} hitSlop={8} style={styles.addCancel}>
+                          <Text style={styles.addCancelText}>Cancel</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={confirmAddStep}
+                          disabled={newStepTitle.trim().length === 0}
+                          hitSlop={8}
+                          style={[styles.addConfirm, newStepTitle.trim().length === 0 && styles.addConfirmDisabled]}
+                        >
+                          <Text style={styles.addConfirmText}>Add</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  <Pressable
+                    onPress={openAddStep}
+                    style={[styles.addStepRow, isAtCap && styles.addStepRowLocked]}
+                    accessibilityRole="button"
+                    accessibilityLabel={isAtCap ? "Add step — upgrade to Pro" : "Add step"}
+                  >
+                    <Text style={[styles.addStepText, isAtCap && styles.addStepTextLocked]}>
+                      {isAtCap ? "🔒 Add Step — Upgrade to Pro" : "+ Add step"}
+                    </Text>
+                  </Pressable>
                 )}
               </View>
+
+              {startError && <Text style={styles.errorDetail}>{startError}</Text>}
 
               <View style={styles.companionLine}>
                 <Companion state="mentioned" caption="Working alongside you for this one." />
@@ -243,20 +386,82 @@ const createStyles = (colors: IColorTokens) =>
       fontWeight: "700",
       marginTop: spacing.xxs,
     },
-    pathHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: spacing.sm,
-    },
     pathSummary: {
       color: colors.textSecondary,
       fontSize: 12,
       fontWeight: "600",
+      marginBottom: spacing.sm,
     },
-    planToggle: {
+    addForm: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 16,
+      padding: spacing.md,
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    addInput: {
+      color: colors.text,
+      fontSize: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      paddingBottom: spacing.xs,
+    },
+    addFormRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    addFormActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    addCancel: {
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.xs,
+    },
+    addCancelText: {
       color: colors.textSecondary,
-      fontSize: 12,
+      fontSize: 13,
+    },
+    addConfirm: {
+      backgroundColor: colors.invertFill,
+      borderRadius: 999,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.md,
+      minWidth: 56,
+      alignItems: "center",
+    },
+    addConfirmDisabled: {
+      opacity: 0.4,
+    },
+    addConfirmText: {
+      color: colors.invertText,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    addStepRow: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderStyle: "dashed",
+      borderRadius: 16,
+      paddingVertical: spacing.sm,
+      alignItems: "center",
+      marginTop: spacing.xs,
+    },
+    addStepRowLocked: {
+      borderColor: colors.warning,
+      borderStyle: "solid",
+      backgroundColor: colors.warningGlow,
+    },
+    addStepText: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    addStepTextLocked: {
+      color: colors.warning,
     },
     companionLine: {
       alignItems: "center",
