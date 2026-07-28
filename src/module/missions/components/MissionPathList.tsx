@@ -82,36 +82,46 @@ function PlanStepRow({
             returnKeyType="done"
           />
         ) : (
-          <Pressable onPress={startEditing} hitSlop={4} style={styles.titleRow}>
+          <Pressable onPress={startEditing} hitSlop={4}>
             <Text style={[styles.stepText, isCurrent && styles.stepTextCurrent]}>{step.title}</Text>
-            <Text style={styles.editIcon}>✎</Text>
           </Pressable>
         )}
         <Text style={styles.stepMeta}>{step.minutes} min</Text>
       </View>
 
       {!isEditing && (
-        <View style={styles.reorderButtons}>
+        <View style={styles.controls}>
           <Pressable
-            onPress={onMoveUp}
-            disabled={!canMoveUp}
-            hitSlop={6}
-            style={[styles.reorderButton, !canMoveUp && styles.reorderButtonDisabled]}
+            onPress={startEditing}
+            hitSlop={8}
+            style={styles.editButton}
             accessibilityRole="button"
-            accessibilityLabel="Move step up"
+            accessibilityLabel="Rename step"
           >
-            <Text style={styles.reorderGlyph}>▲</Text>
+            <Text style={styles.editIcon}>✎</Text>
           </Pressable>
-          <Pressable
-            onPress={onMoveDown}
-            disabled={!canMoveDown}
-            hitSlop={6}
-            style={[styles.reorderButton, !canMoveDown && styles.reorderButtonDisabled]}
-            accessibilityRole="button"
-            accessibilityLabel="Move step down"
-          >
-            <Text style={styles.reorderGlyph}>▼</Text>
-          </Pressable>
+          <View style={styles.reorderButtons}>
+            <Pressable
+              onPress={onMoveUp}
+              disabled={!canMoveUp}
+              hitSlop={6}
+              style={[styles.reorderButton, !canMoveUp && styles.reorderButtonDisabled]}
+              accessibilityRole="button"
+              accessibilityLabel="Move step up"
+            >
+              <Text style={styles.reorderGlyph}>▲</Text>
+            </Pressable>
+            <Pressable
+              onPress={onMoveDown}
+              disabled={!canMoveDown}
+              hitSlop={6}
+              style={[styles.reorderButton, !canMoveDown && styles.reorderButtonDisabled]}
+              accessibilityRole="button"
+              accessibilityLabel="Move step down"
+            >
+              <Text style={styles.reorderGlyph}>▼</Text>
+            </Pressable>
+          </View>
         </View>
       )}
     </View>
@@ -188,15 +198,6 @@ const createStyles = (colors: IColorTokens) =>
       paddingBottom: spacing.sm,
       gap: 2,
     },
-    titleRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: spacing.xxs,
-    },
-    editIcon: {
-      color: colors.textFaint,
-      fontSize: 11,
-    },
     stepText: {
       color: colors.textSecondary,
       fontSize: 13,
@@ -217,6 +218,21 @@ const createStyles = (colors: IColorTokens) =>
     stepMeta: {
       color: colors.textFaint,
       fontSize: 11,
+    },
+    controls: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    editButton: {
+      width: 28,
+      height: 28,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    editIcon: {
+      color: colors.textSecondary,
+      fontSize: 14,
     },
     reorderButtons: {
       gap: spacing.xxs,

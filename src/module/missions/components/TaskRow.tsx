@@ -84,9 +84,8 @@ export function TaskRow({
             returnKeyType="done"
           />
         ) : (
-          <Pressable onPress={startEditing} disabled={isSaving || isLocked} hitSlop={4} style={styles.titleRow}>
+          <Pressable onPress={startEditing} disabled={isSaving || isLocked} hitSlop={4}>
             <Text style={[styles.title, isDone && styles.titleDone]}>{task.title}</Text>
-            {!isLocked && <Text style={styles.editIcon}>✎</Text>}
           </Pressable>
         )}
         {task.estimatedMinutes !== null && (
@@ -95,27 +94,39 @@ export function TaskRow({
       </View>
 
       {!isEditing && !isLocked && (
-        <View style={styles.reorderButtons}>
+        <View style={styles.controls}>
           <Pressable
-            onPress={onMoveUp}
-            disabled={!canMoveUp}
-            hitSlop={6}
-            style={[styles.reorderButton, !canMoveUp && styles.reorderButtonDisabled]}
+            onPress={startEditing}
+            disabled={isSaving}
+            hitSlop={8}
+            style={styles.editButton}
             accessibilityRole="button"
-            accessibilityLabel="Move task up"
+            accessibilityLabel="Rename task"
           >
-            <Text style={styles.reorderGlyph}>▲</Text>
+            <Text style={styles.editIcon}>✎</Text>
           </Pressable>
-          <Pressable
-            onPress={onMoveDown}
-            disabled={!canMoveDown}
-            hitSlop={6}
-            style={[styles.reorderButton, !canMoveDown && styles.reorderButtonDisabled]}
-            accessibilityRole="button"
-            accessibilityLabel="Move task down"
-          >
-            <Text style={styles.reorderGlyph}>▼</Text>
-          </Pressable>
+          <View style={styles.reorderButtons}>
+            <Pressable
+              onPress={onMoveUp}
+              disabled={!canMoveUp}
+              hitSlop={6}
+              style={[styles.reorderButton, !canMoveUp && styles.reorderButtonDisabled]}
+              accessibilityRole="button"
+              accessibilityLabel="Move task up"
+            >
+              <Text style={styles.reorderGlyph}>▲</Text>
+            </Pressable>
+            <Pressable
+              onPress={onMoveDown}
+              disabled={!canMoveDown}
+              hitSlop={6}
+              style={[styles.reorderButton, !canMoveDown && styles.reorderButtonDisabled]}
+              accessibilityRole="button"
+              accessibilityLabel="Move task down"
+            >
+              <Text style={styles.reorderGlyph}>▼</Text>
+            </Pressable>
+          </View>
         </View>
       )}
     </View>
@@ -152,15 +163,6 @@ const createStyles = (colors: IColorTokens) =>
       flex: 1,
       gap: 2,
     },
-    titleRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: spacing.xxs,
-    },
-    editIcon: {
-      color: colors.textFaint,
-      fontSize: 12,
-    },
     title: {
       color: colors.text,
       fontSize: 15,
@@ -182,6 +184,21 @@ const createStyles = (colors: IColorTokens) =>
     meta: {
       color: colors.textFaint,
       fontSize: 12,
+    },
+    controls: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    editButton: {
+      width: 28,
+      height: 28,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    editIcon: {
+      color: colors.textSecondary,
+      fontSize: 15,
     },
     reorderButtons: {
       gap: spacing.xxs,

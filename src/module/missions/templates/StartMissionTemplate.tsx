@@ -1,11 +1,12 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Companion } from "@/components/content/Companion";
 import { StatCard } from "@/components/content/StatCard";
 import { TopBar } from "@/components/navigation/TopBar";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { GlowOrb } from "@/components/ui/GlowOrb";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { TextField } from "@/components/ui/TextField";
@@ -42,8 +43,17 @@ export function StartMissionTemplate() {
   const [isAddingStep, setIsAddingStep] = useState(false);
   const [newStepTitle, setNewStepTitle] = useState("");
   const [newStepMinutes, setNewStepMinutes] = useState(DEFAULT_NEW_STEP_MINUTES);
+  // Holds whatever navigation action (back button, hardware back, swipe-
+  // back gesture) tried to leave this screen while there was a plan worth
+  // losing — non-null means "show the confirm dialog." Typed as unknown
+  // rather than importing @react-navigation/native's NavigationAction type
+  // directly, since that package isn't a declared dependency of this app;
+  // it's only ever replayed verbatim via navigation.dispatch, never
+  // inspected.
+  const [pendingLeaveAction, setPendingLeaveAction] = useState<unknown>(null);
   const nextStepIdRef = useRef(0);
 
+  const navigation = useNavigation();
   const { plan, error: planError } = useMissionPlan();
   const { create, isLoading: isCreating, addExtraTask, finalizeOrder } = useCreateMission();
   const { isPro, limits } = useEntitlement();
@@ -72,6 +82,29 @@ export function StartMissionTemplate() {
     isPro,
   );
   const addStepMax = isPro ? UNCAPPED_MAX_STEP_MINUTES : Math.max(5, remainingMinutesBudget ?? UNCAPPED_MAX_STEP_MINUTES);
+
+  // Intercepts every way this screen can be left — the header back button
+  // (it calls router.back(), which dispatches the same GO_BACK action),
+  // Android's hardware back, and iOS's swipe-back gesture all go through
+  // this one event, so one listener covers all three. Only fires once a
+  // plan exists (state "input" has nothing to lose yet).
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (event) => {
+      if (steps.length === 0) return;
+      event.preventDefault();
+      setPendingLeaveAction(event.data.action);
+    });
+    return unsubscribe;
+  }, [navigation, steps.length]);
+
+  const confirmLeave = () => {
+    if (pendingLeaveAction) {
+      navigation.dispatch(pendingLeaveAction as Parameters<typeof navigation.dispatch>[0]);
+    }
+    setPendingLeaveAction(null);
+  };
+
+  const cancelLeave = () => setPendingLeaveAction(null);
 
   const makeStepId = () => {
     nextStepIdRef.current += 1;
@@ -315,6 +348,16 @@ export function StartMissionTemplate() {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      <ConfirmDialog
+        visible={pendingLeaveAction !== null}
+        title="Leave without finishing?"
+        body="You'll lose this plan and any changes you made to it."
+        confirmLabel="Leave"
+        cancelLabel="Keep Editing"
+        onConfirm={confirmLeave}
+        onCancel={cancelLeave}
+      />
     </SafeAreaView>
   );
 }
