@@ -82,8 +82,9 @@ function PlanStepRow({
             returnKeyType="done"
           />
         ) : (
-          <Pressable onPress={startEditing} hitSlop={4}>
+          <Pressable onPress={startEditing} hitSlop={4} style={styles.titleRow}>
             <Text style={[styles.stepText, isCurrent && styles.stepTextCurrent]}>{step.title}</Text>
+            <Text style={styles.editIcon}>✎</Text>
           </Pressable>
         )}
         <Text style={styles.stepMeta}>{step.minutes} min</Text>
@@ -186,6 +187,15 @@ const createStyles = (colors: IColorTokens) =>
       flex: 1,
       paddingBottom: spacing.sm,
       gap: 2,
+    },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xxs,
+    },
+    editIcon: {
+      color: colors.textFaint,
+      fontSize: 11,
     },
     stepText: {
       color: colors.textSecondary,

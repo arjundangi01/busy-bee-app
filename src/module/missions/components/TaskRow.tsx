@@ -84,8 +84,9 @@ export function TaskRow({
             returnKeyType="done"
           />
         ) : (
-          <Pressable onPress={startEditing} disabled={isSaving || isLocked} hitSlop={4}>
+          <Pressable onPress={startEditing} disabled={isSaving || isLocked} hitSlop={4} style={styles.titleRow}>
             <Text style={[styles.title, isDone && styles.titleDone]}>{task.title}</Text>
+            {!isLocked && <Text style={styles.editIcon}>✎</Text>}
           </Pressable>
         )}
         {task.estimatedMinutes !== null && (
@@ -150,6 +151,15 @@ const createStyles = (colors: IColorTokens) =>
     textWrap: {
       flex: 1,
       gap: 2,
+    },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xxs,
+    },
+    editIcon: {
+      color: colors.textFaint,
+      fontSize: 12,
     },
     title: {
       color: colors.text,
