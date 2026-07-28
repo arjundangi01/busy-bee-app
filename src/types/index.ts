@@ -1,4 +1,4 @@
-import { MISSION_STATUS, SESSION_END_REASON, SUBSCRIPTION_STATUS, TASK_STATUS } from "@/utils/enums";
+import { MISSION_STATUS, SESSION_END_REASON, SESSION_ROUGHNESS, SUBSCRIPTION_STATUS, TASK_STATUS } from "@/utils/enums";
 
 export type IApiResponse<T> = {
   success: boolean;
@@ -100,6 +100,7 @@ export type IMission = {
 export type IMissionPlan = {
   nextStep: string;
   remainingSteps: string[];
+  estimatedMinutes: number;
 };
 
 export type IFocusSession = {
@@ -121,10 +122,26 @@ export type ITrendDay = {
   status: ITrendDayStatus;
 };
 
+export type ISessionSummary = {
+  id: string;
+  missionId: string;
+  missionTitle: string;
+  startedAt: string;
+  endedAt: string | null;
+  roughness: SESSION_ROUGHNESS;
+};
+
+export type IPaginatedSessionHistory = {
+  items: ISessionSummary[];
+  nextCursor: string | null;
+};
+
 export type ITodayCard = {
   sessionsCompleted: number;
   minutesFocused: number;
   tasksWaiting: number;
+  sessions: ISessionSummary[];
+  roughSessionCount: number;
 };
 
 export type IActiveSession = {

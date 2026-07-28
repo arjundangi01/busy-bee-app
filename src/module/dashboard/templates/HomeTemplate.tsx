@@ -147,15 +147,23 @@ export function HomeTemplate() {
                 <Text style={styles.todayMeta}>
                   {dashboard.today.sessionsCompleted} sessions · {dashboard.today.minutesFocused}m focused
                   today · {dashboard.today.tasksWaiting} flexible tasks waiting
+                  {dashboard.today.roughSessionCount > 0 && (
+                    <Text style={styles.roughFlag}> · {dashboard.today.roughSessionCount} rough</Text>
+                  )}
                 </Text>
               </StatCard>
             </Pressable>
 
-            <Text style={styles.signal}>
-              {dashboard.isColdStart || !dashboard.patternSignal
-                ? "Patterns will show up here after a few sessions."
-                : dashboard.patternSignal}
-            </Text>
+            <StatCard>
+              <View style={styles.signalRow}>
+                <Text style={styles.signalIcon}>◷</Text>
+                <Text style={styles.signal}>
+                  {dashboard.isColdStart || !dashboard.patternSignal
+                    ? "Patterns will show up here after a few sessions."
+                    : dashboard.patternSignal}
+                </Text>
+              </View>
+            </StatCard>
           </Animated.View>
         )}
       </ScrollView>
@@ -274,9 +282,23 @@ const createStyles = (colors: IColorTokens) =>
       marginTop: spacing.xxxs,
       fontVariant: ["tabular-nums"],
     },
+    roughFlag: {
+      color: colors.danger,
+      fontWeight: "600",
+    },
+    signalRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    signalIcon: {
+      color: colors.textMuted,
+      fontSize: 14,
+    },
     signal: {
+      flex: 1,
       color: colors.textSecondary,
-      fontSize: 11,
+      fontSize: 12,
     },
     ctaWrapper: {
       paddingHorizontal: spacing.lg,
