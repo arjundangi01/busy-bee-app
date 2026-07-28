@@ -18,6 +18,7 @@ import { IPlanLimits } from "@/types";
 type PaywallTemplateProps = {
   entry: PAYWALL_ENTRY;
   missionId: string | null;
+  reason: "count" | "time" | null;
 };
 
 type PageState = "default" | "processing" | "confirmation" | "failed";
@@ -25,6 +26,7 @@ type PageState = "default" | "processing" | "confirmation" | "failed";
 const getHeadlineCopy = (
   entry: PAYWALL_ENTRY,
   limits: IPlanLimits,
+  reason: "count" | "time" | null,
 ): { headline: string; subline: string; confirmationBody: string } => {
   switch (entry) {
     case PAYWALL_ENTRY.SESSION_CAP:
@@ -75,6 +77,24 @@ const getHeadlineCopy = (
         subline: "Pro unlocks Bee's full set of hive themes.",
         confirmationBody: "The full set is unlocked — pick it anytime from the Hive.",
       };
+    case PAYWALL_ENTRY.MISSION_TASK_LIMIT:
+      return reason === "time"
+        ? {
+            headline:
+              limits.maxMissionMinutes !== null
+                ? `This mission hit the free ${formatDurationCap(limits.maxMissionMinutes * 60)} time budget.`
+                : "This mission hit the free time budget.",
+            subline: "Pro missions have no combined time budget — add as much as the task needs.",
+            confirmationBody: "No more mission time budget — add as much as the task needs.",
+          }
+        : {
+            headline:
+              limits.maxTasksPerMission !== null
+                ? `This mission hit the free ${limits.maxTasksPerMission}-task limit.`
+                : "This mission hit the free task limit.",
+            subline: "Pro missions can have as many tasks as the roadmap needs.",
+            confirmationBody: "No more task limit — add as many as the roadmap needs.",
+          };
     default:
       // entry comes from a route param, not a closed call site — an
       // unrecognized/missing value (bad deep link, stale navigation state)
@@ -121,6 +141,11 @@ const getComparisonRows = (
     pro: "Unlimited",
   },
   { label: "Dashboard detail", free: "Daily & weekly", pro: "Full hourly & app-level" },
+  {
+    label: "Tasks per mission",
+    free: limits.maxTasksPerMission !== null ? `${limits.maxTasksPerMission}` : "—",
+    pro: "Unlimited",
+  },
   // Sourced from the real work-type registry (useWorkTypes), not a
   // hardcoded string — see 07-paywall-worktype-gating.md's acceptance
   // criteria. Pro's own count isn't shown since no Pro work type exists
@@ -137,6 +162,10 @@ const resumeTriggeringContext = (entry: PAYWALL_ENTRY, missionId: string | null)
     router.replace(routes.focusSession(missionId));
     return;
   }
+  if (entry === PAYWALL_ENTRY.MISSION_TASK_LIMIT && missionId) {
+    router.replace(routes.mission(missionId));
+    return;
+  }
   if (
     entry === PAYWALL_ENTRY.ANALYTICS ||
     entry === PAYWALL_ENTRY.SETTINGS ||
@@ -150,7 +179,7 @@ const resumeTriggeringContext = (entry: PAYWALL_ENTRY, missionId: string | null)
   router.replace(routes.tabs.home());
 };
 
-export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
+export function PaywallTemplate({ entry, missionId, reason }: PaywallTemplateProps) {
   const colors = useColors();
   const styles = createStyles(colors);
   const { limits, refresh: refreshEntitlement } = useEntitlement();
@@ -165,7 +194,7 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
     getProPackage().then(setProPackage);
   }, []);
 
-  const copy = getHeadlineCopy(entry, limits);
+  const copy = getHeadlineCopy(entry, limits, reason);
   const benefits = getBenefits(limits);
   const freeWorkTypeCount = workTypes.filter((workType) => workType.tier === "FREE").length;
   const freeThemeCount = hiveThemes.filter((theme) => theme.tier === "FREE").length;
@@ -175,6 +204,10 @@ export function PaywallTemplate({ entry, missionId }: PaywallTemplateProps) {
     : FALLBACK_PRO_PRICE_LABEL;
 
   const handleDismiss = () => {
+    if (entry === PAYWALL_ENTRY.MISSION_TASK_LIMIT && missionId) {
+      router.replace(routes.mission(missionId));
+      return;
+    }
     if (
       entry === PAYWALL_ENTRY.ANALYTICS ||
       entry === PAYWALL_ENTRY.SETTINGS ||

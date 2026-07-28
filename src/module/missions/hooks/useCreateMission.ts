@@ -6,7 +6,10 @@ import { IApiResponse, IMission } from "@/types";
 type ICreateMissionPayload = {
   taskText: string;
   nextStep: string;
+  nextStepMinutes: number;
   remainingSteps: string[];
+  remainingStepsMinutes: number[];
+  focusMinutes: number;
 };
 
 export function useCreateMission() {

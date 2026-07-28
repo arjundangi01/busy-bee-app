@@ -14,11 +14,16 @@ export type IColorTokens = {
   accentGradient: readonly [string, string, string];
   accentGlow: string;
   danger: string;
+  warning: string;
+  warningGlow: string;
 };
 
 // "Premium Black & White" theme — see design-artifacts/D-Design-System/00-design-system.md#colors.
 // color-accent is permitted in exactly three places: the wordmark's "bee", the
 // Companion presence element, and the streak-count stat value. Nowhere else.
+// `warning` is a separate, narrowly-scoped exception — Free-tier limit
+// notices only (e.g. the focus-timer's session cap), not a general-purpose
+// alert color.
 const dark: IColorTokens = {
   bg: "#000000",
   surface: "#0c0c0c",
@@ -35,6 +40,8 @@ const dark: IColorTokens = {
   accentGradient: ["#f0cb7a", "#d4a943", "#a67b1f"],
   accentGlow: "rgba(212,169,67,0.5)",
   danger: "#FF7A7A",
+  warning: "#e0954a",
+  warningGlow: "rgba(224,149,74,0.16)",
 };
 
 const light: IColorTokens = {
@@ -53,6 +60,8 @@ const light: IColorTokens = {
   accentGradient: ["#f0cb7a", "#d4a943", "#a67b1f"],
   accentGlow: "rgba(212,169,67,0.35)",
   danger: "#C23B3B",
+  warning: "#a8621f",
+  warningGlow: "rgba(168,98,31,0.12)",
 };
 
 export const themes = { dark, light } as const;

@@ -18,7 +18,12 @@ export function useEntitlement() {
     expiresAt: data?.expiresAt ?? null,
     // null means "not loaded yet" here, same as "unlimited" would mean once
     // loaded — callers must gate cap-dependent behavior on isLoading too.
-    limits: data?.limits ?? { dailySessionCap: null, sessionDurationCapSeconds: null },
+    limits: data?.limits ?? {
+      dailySessionCap: null,
+      sessionDurationCapSeconds: null,
+      maxTasksPerMission: null,
+      maxMissionMinutes: null,
+    },
     isLoading,
     error: error ? getErrorMessage(error) : null,
     refresh: refetch,

@@ -10,7 +10,7 @@ import {
 } from "@/module/focus/hooks/useFocusSession";
 import { useWorkTypes } from "@/module/focus/hooks/useWorkTypes";
 import { FOCUS_SESSION_ERROR_CODE } from "@/module/focus/utils/enums";
-import { computeCurrentWorkUnit } from "@/module/focus/utils/workProgress";
+import { computeCurrentWorkUnit, getEffectiveDurationCapSeconds } from "@/module/focus/utils/workProgress";
 import { useBeeSkins } from "@/module/hive/hooks/useBeeSkins";
 import { useHiveThemes } from "@/module/hive/hooks/useHiveThemes";
 import { useMission } from "@/module/missions/hooks/useMission";
@@ -72,7 +72,15 @@ export function FocusSessionTemplate({
     beeSkins.find((skin) => skin.id === user?.selectedSkinId) ?? null;
   const selectedTheme =
     hiveThemes.find((theme) => theme.id === user?.selectedThemeId) ?? null;
-  const sessionDurationCapSeconds = limits.sessionDurationCapSeconds;
+  // The mission's own chosen focus duration (set on the plan-ready screen),
+  // clamped by whatever the caller's plan still allows — not just the raw
+  // plan cap, so the countdown (and the hive's fill pacing below) reflects
+  // the duration actually picked for this mission, not always the ceiling.
+  const missionDurationSeconds = mission?.estimatedMinutes != null ? mission.estimatedMinutes * 60 : null;
+  const sessionDurationCapSeconds = getEffectiveDurationCapSeconds(
+    limits.sessionDurationCapSeconds,
+    missionDurationSeconds,
+  );
 
   const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
   const [sessionWorkTypeId, setSessionWorkTypeId] = useState<string | null>(
@@ -94,7 +102,7 @@ export function FocusSessionTemplate({
   const sessionWorkType =
     workTypes.find((workType) => workType.id === sessionWorkTypeId) ?? null;
   const currentWorkUnit = sessionWorkType
-    ? computeCurrentWorkUnit(elapsedSeconds, sessionWorkType.totalUnits)
+    ? computeCurrentWorkUnit(elapsedSeconds, sessionWorkType.totalUnits, sessionDurationCapSeconds)
     : 0;
 
   const { isEnforcementActive, isDistracted } = useBlockingEnforcement({

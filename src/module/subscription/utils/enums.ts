@@ -20,4 +20,9 @@ export enum PAYWALL_ENTRY {
   // Bee's Hive — tapping a Pro-locked environment theme. Same reasoning as
   // HIVE_WORK_TYPE/HIVE_SKIN: environment variety is a genuine Pro perk.
   HIVE_THEME = "hiveTheme",
+  // Mission task editing — tapping "Add Task" on a Free-tier mission that's
+  // already at its task-count or time-budget cap. Rides alongside a
+  // `reason: "count" | "time"` param (like `missionId` already does for
+  // SESSION_CAP) so the copy can say which limit was actually hit.
+  MISSION_TASK_LIMIT = "missionTaskLimit",
 }

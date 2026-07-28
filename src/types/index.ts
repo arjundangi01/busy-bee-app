@@ -99,7 +99,9 @@ export type IMission = {
 
 export type IMissionPlan = {
   nextStep: string;
+  nextStepMinutes: number;
   remainingSteps: string[];
+  remainingStepsMinutes: number[];
   estimatedMinutes: number;
 };
 
@@ -177,6 +179,8 @@ export type IFocusWindow = {
 export type IPlanLimits = {
   dailySessionCap: number | null;
   sessionDurationCapSeconds: number | null;
+  maxTasksPerMission: number | null;
+  maxMissionMinutes: number | null;
 };
 
 export type ISubscriptionStatus = {
