@@ -88,9 +88,16 @@ export function StartMissionTemplate() {
   // Android's hardware back, and iOS's swipe-back gesture all go through
   // this one event, so one listener covers all three. Only fires once a
   // plan exists (state "input" has nothing to lose yet).
+  //
+  // handleStart's own router.replace() into the focus session fires this
+  // exact same event — that's a real, intentional forward navigation on
+  // success, not a "leave" to confirm, so it sets skipLeaveConfirmRef right
+  // before navigating to let that one removal through untouched.
+  const skipLeaveConfirmRef = useRef(false);
+
   useEffect(() => {
     const unsubscribe = navigation.addListener("beforeRemove", (event) => {
-      if (steps.length === 0) return;
+      if (steps.length === 0 || skipLeaveConfirmRef.current) return;
       event.preventDefault();
       setPendingLeaveAction(event.data.action);
     });
@@ -211,6 +218,7 @@ export function StartMissionTemplate() {
         });
       }
 
+      skipLeaveConfirmRef.current = true;
       router.replace(routes.focusSession(mission.id));
     } catch (error) {
       const code = getErrorCode(error);
