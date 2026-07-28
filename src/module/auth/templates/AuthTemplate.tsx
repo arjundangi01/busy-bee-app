@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Companion } from "@/components/content/Companion";
@@ -79,7 +79,12 @@ export function AuthTemplate({ initialMode }: AuthTemplateProps) {
         <BackButton onPress={() => router.back()} />
       </View>
 
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {isSignUp && (
           <View style={styles.companionRow}>
             <Companion state="mentioned" caption="One last thing before we start." />
@@ -140,7 +145,7 @@ export function AuthTemplate({ initialMode }: AuthTemplateProps) {
           {isSignUp && <Text style={styles.helper}>At least {MIN_PASSWORD_LENGTH} characters.</Text>}
           {error && <Text style={styles.error}>{error}</Text>}
         </View>
-      </View>
+      </ScrollView>
 
       <View style={styles.footer}>
         <PrimaryButton
@@ -172,8 +177,11 @@ const createStyles = (colors: IColorTokens) =>
     },
     content: {
       flex: 1,
+    },
+    contentContainer: {
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.md,
+      paddingBottom: spacing.lg,
     },
     companionRow: {
       marginBottom: spacing.md,
