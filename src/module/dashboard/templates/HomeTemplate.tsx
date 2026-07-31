@@ -16,6 +16,11 @@ import { StatCard } from "@/components/content/StatCard";
 import { TopBar } from "@/components/navigation/TopBar";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useDashboard } from "@/module/dashboard/hooks/useDashboard";
+import { ScreenTimeAppRow } from "@/module/progress/components/ScreenTimeAppRow";
+import { UsageAccessPrompt } from "@/module/progress/components/UsageAccessPrompt";
+import { useIngestUsageStats } from "@/module/progress/hooks/useIngestUsageStats";
+import { useProgress } from "@/module/progress/hooks/useProgress";
+import { useUsageAccessStatus } from "@/module/progress/hooks/useUsageAccessStatus";
 import { routes } from "@/config/routes";
 import { useAuthStore } from "@/store/auth-store";
 import { IColorTokens, spacing, useColors } from "@/theme";
@@ -24,12 +29,19 @@ import { ITrendDay } from "@/types";
 import * as BlockingEnforcement from "../../../../modules/blocking-enforcement";
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+const NOT_ENOUGH_DATA_YET = "Not enough data yet";
+const SCREEN_TIME_APP_LIMIT = 5;
 
 export function HomeTemplate() {
   const colors = useColors();
   const styles = createStyles(colors);
   const { dashboard, isLoading, isRefetching, error, refresh } = useDashboard();
   const { user } = useAuthStore();
+  const { progress, isLoading: isProgressLoading } = useProgress();
+  const isUsageAccessGranted = useUsageAccessStatus();
+  const { isSyncing: isSyncingUsageStats } = useIngestUsageStats(isUsageAccessGranted);
+  const screenTimeApps = progress?.screenTime?.apps ?? [];
+  const screenTimeMaxSeconds = screenTimeApps[0]?.foregroundSeconds ?? 0;
 
   // One-time just-in-time permission nudge (design-artifacts/evolution/specs/
   // 06-permission-priming.md) — routes through it instead of straight to
@@ -164,6 +176,48 @@ export function HomeTemplate() {
                 </Text>
               </View>
             </StatCard>
+
+            {Platform.OS === "android" && (
+              <StatCard>
+                <Text style={styles.sectionLabel}>Screen Time</Text>
+                {isUsageAccessGranted === null || isProgressLoading ? (
+                  <ActivityIndicator color={colors.textSecondary} />
+                ) : isUsageAccessGranted === false ? (
+                  <UsageAccessPrompt />
+                ) : !progress || progress.screenTime === null ? (
+                  isSyncingUsageStats ? (
+                    <ActivityIndicator color={colors.textSecondary} />
+                  ) : (
+                    <Text style={styles.emptyText}>{NOT_ENOUGH_DATA_YET}</Text>
+                  )
+                ) : (
+                  <>
+                    <Text style={styles.reclaimedValue}>
+                      {formatMinutesAsHoursAndMinutes(Math.round(progress.screenTime.totalForegroundSeconds / 60))}{" "}
+                      <Text style={styles.reclaimedUnit}>today</Text>
+                    </Text>
+                    {screenTimeApps.slice(0, SCREEN_TIME_APP_LIMIT).map((app) => (
+                      <ScreenTimeAppRow
+                        key={app.packageName}
+                        appName={app.appName}
+                        foregroundSeconds={app.foregroundSeconds}
+                        isBlocked={app.isBlocked}
+                        maxForegroundSeconds={screenTimeMaxSeconds}
+                      />
+                    ))}
+                    {screenTimeApps.length > SCREEN_TIME_APP_LIMIT && (
+                      <Text style={styles.moreAppsText}>+{screenTimeApps.length - SCREEN_TIME_APP_LIMIT} more</Text>
+                    )}
+                    <View style={styles.legendRow}>
+                      <View style={[styles.legendDot, { backgroundColor: colors.danger }]} />
+                      <Text style={styles.legendText}>On your blocklist</Text>
+                      <View style={[styles.legendDot, styles.legendDotSpaced, { backgroundColor: colors.textSecondary }]} />
+                      <Text style={styles.legendText}>Everything else</Text>
+                    </View>
+                  </>
+                )}
+              </StatCard>
+            )}
           </Animated.View>
         )}
       </ScrollView>
@@ -299,6 +353,52 @@ const createStyles = (colors: IColorTokens) =>
       flex: 1,
       color: colors.textSecondary,
       fontSize: 12,
+    },
+    sectionLabel: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: "600",
+      textTransform: "uppercase",
+      marginBottom: spacing.sm,
+    },
+    reclaimedValue: {
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: "700",
+      fontVariant: ["tabular-nums"],
+      marginBottom: spacing.xxs,
+    },
+    reclaimedUnit: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: "400",
+    },
+    emptyText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+    },
+    moreAppsText: {
+      color: colors.textMuted,
+      fontSize: 11,
+      marginTop: spacing.xxs,
+    },
+    legendRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginTop: spacing.sm,
+    },
+    legendDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 999,
+    },
+    legendDotSpaced: {
+      marginLeft: spacing.sm,
+    },
+    legendText: {
+      color: colors.textMuted,
+      fontSize: 10.5,
+      marginLeft: spacing.xxs,
     },
     ctaWrapper: {
       paddingHorizontal: spacing.lg,

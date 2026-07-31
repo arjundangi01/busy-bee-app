@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
@@ -21,9 +21,21 @@ const localDayKey = (date: Date): string => {
 // posted once, not streamed" design). The backend upserts by day, so
 // re-running this later the same day only ever refines today's row with a
 // more complete running total — never duplicates or streams raw events.
-export function useIngestUsageStats() {
+//
+// Takes the live granted status (from useUsageAccessStatus) rather than
+// re-checking permission itself — that status is re-derived on every
+// foreground return, so a visit that starts before the user grants access
+// in system Settings and then returns to the app still triggers exactly one
+// ingest, instead of being stuck on the mount-time "not granted" snapshot.
+//
+// Returns isSyncing so the Screen Time / Device Activity sections can show
+// their own loading state instead of flashing "not enough data" — the
+// invalidateQueries below triggers a background refetch of ["progress"]
+// that the caller shouldn't confuse with a user-initiated pull-to-refresh.
+export function useIngestUsageStats(isUsageAccessGranted: boolean | null) {
   const queryClient = useQueryClient();
   const hasRunRef = useRef(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const mutation = useMutation({
     mutationKey: ["usage-stats", "ingest-daily"],
@@ -39,19 +51,19 @@ export function useIngestUsageStats() {
         deviceActivity,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["progress"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["progress"] });
     },
+    onSettled: () => setIsSyncing(false),
   });
 
   useEffect(() => {
-    if (Platform.OS !== "android" || hasRunRef.current) return;
+    if (Platform.OS !== "android" || !isUsageAccessGranted || hasRunRef.current) return;
     hasRunRef.current = true;
-
-    UsageStats.isUsageAccessGranted().then((granted) => {
-      if (!granted) return;
-      mutation.mutate();
-    });
+    setIsSyncing(true);
+    mutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isUsageAccessGranted]);
+
+  return { isSyncing };
 }

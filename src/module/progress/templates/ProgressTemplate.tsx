@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -6,7 +7,6 @@ import { StatCard } from "@/components/content/StatCard";
 import { TopBar } from "@/components/navigation/TopBar";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { DeviceActivityRow } from "@/module/progress/components/DeviceActivityRow";
-import { ScreenTimeAppRow } from "@/module/progress/components/ScreenTimeAppRow";
 import { Sparkline } from "@/module/progress/components/Sparkline";
 import { StreakCalendar } from "@/module/progress/components/StreakCalendar";
 import { UsageAccessPrompt } from "@/module/progress/components/UsageAccessPrompt";
@@ -28,7 +28,6 @@ import { IColorTokens, spacing, useColors } from "@/theme";
 import { IFocusWindow } from "@/types";
 
 const NOT_ENOUGH_DATA_YET = "Not enough data yet";
-const SCREEN_TIME_APP_LIMIT = 5;
 // Free-tier locked preview shows these real row labels faded behind the
 // lock — the "real shape, not generic decoration" the spec calls for —
 // without ever rendering a Free user's actual numbers (or a fabricated
@@ -46,10 +45,24 @@ const formatFocusWindow = ({ startHour, endHour }: IFocusWindow): string => {
 export function ProgressTemplate() {
   const colors = useColors();
   const styles = createStyles(colors);
-  const { progress, isLoading, isRefetching, error, refresh } = useProgress();
+  const { progress, isLoading, error, refresh } = useProgress();
   const { isPro } = useEntitlement();
   const isUsageAccessGranted = useUsageAccessStatus();
-  useIngestUsageStats();
+  const { isSyncing: isSyncingUsageStats } = useIngestUsageStats(isUsageAccessGranted);
+
+  // Deliberately separate from useProgress's isRefetching — that also flips
+  // true for the background refetch useIngestUsageStats triggers after a
+  // sync, and using it here made the pull-to-refresh spinner pop up
+  // unprompted. This only tracks the user's own pull gesture.
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  const handleManualRefresh = useCallback(async () => {
+    setIsManualRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  }, [refresh]);
 
   if (isLoading && !progress) {
     return (
@@ -74,15 +87,14 @@ export function ProgressTemplate() {
     return null;
   }
 
-  const screenTimeApps = progress.screenTime?.apps ?? [];
-  const screenTimeMaxSeconds = screenTimeApps[0]?.foregroundSeconds ?? 0;
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <TopBar variant="tab-root" onAvatarPress={() => router.push(routes.tabs.settings())} />
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl tintColor={colors.text} refreshing={isRefetching} onRefresh={refresh} />}
+        refreshControl={
+          <RefreshControl tintColor={colors.text} refreshing={isManualRefreshing} onRefresh={handleManualRefresh} />
+        }
       >
         <Text style={styles.pageTitle}>Your Progress</Text>
 
@@ -179,42 +191,6 @@ export function ProgressTemplate() {
           />
         </StatCard>
 
-        {Platform.OS === "android" && (
-          <StatCard>
-            <Text style={styles.sectionLabel}>Screen Time</Text>
-            {isUsageAccessGranted === false ? (
-              <UsageAccessPrompt />
-            ) : progress.screenTime === null ? (
-              <Text style={styles.emptyText}>{NOT_ENOUGH_DATA_YET}</Text>
-            ) : (
-              <>
-                <Text style={styles.reclaimedValue}>
-                  {formatMinutesAsHoursAndMinutes(Math.round(progress.screenTime.totalForegroundSeconds / 60))}{" "}
-                  <Text style={styles.reclaimedUnit}>today</Text>
-                </Text>
-                {screenTimeApps.slice(0, SCREEN_TIME_APP_LIMIT).map((app) => (
-                  <ScreenTimeAppRow
-                    key={app.packageName}
-                    appName={app.appName}
-                    foregroundSeconds={app.foregroundSeconds}
-                    isBlocked={app.isBlocked}
-                    maxForegroundSeconds={screenTimeMaxSeconds}
-                  />
-                ))}
-                {screenTimeApps.length > SCREEN_TIME_APP_LIMIT && (
-                  <Text style={styles.moreAppsText}>+{screenTimeApps.length - SCREEN_TIME_APP_LIMIT} more</Text>
-                )}
-                <View style={styles.legendRow}>
-                  <View style={[styles.legendDot, { backgroundColor: colors.danger }]} />
-                  <Text style={styles.legendText}>On your blocklist</Text>
-                  <View style={[styles.legendDot, styles.legendDotSpaced, { backgroundColor: colors.textSecondary }]} />
-                  <Text style={styles.legendText}>Everything else</Text>
-                </View>
-              </>
-            )}
-          </StatCard>
-        )}
-
         {Platform.OS === "android" && !isPro && (
           <Pressable
             onPress={() => router.push({ pathname: "/paywall", params: { entry: PAYWALL_ENTRY.ANALYTICS } })}
@@ -244,7 +220,11 @@ export function ProgressTemplate() {
             {isUsageAccessGranted === false ? (
               <UsageAccessPrompt />
             ) : progress.deviceActivity === null ? (
-              <Text style={styles.emptyText}>{NOT_ENOUGH_DATA_YET}</Text>
+              isSyncingUsageStats ? (
+                <ActivityIndicator color={colors.textSecondary} />
+              ) : (
+                <Text style={styles.emptyText}>{NOT_ENOUGH_DATA_YET}</Text>
+              )
             ) : (
               <>
                 <DeviceActivityRow
@@ -459,29 +439,6 @@ const createStyles = (colors: IColorTokens) =>
     emptyText: {
       color: colors.textSecondary,
       fontSize: 13,
-    },
-    moreAppsText: {
-      color: colors.textMuted,
-      fontSize: 11,
-      marginTop: spacing.xxs,
-    },
-    legendRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginTop: spacing.sm,
-    },
-    legendDot: {
-      width: 7,
-      height: 7,
-      borderRadius: 999,
-    },
-    legendDotSpaced: {
-      marginLeft: spacing.sm,
-    },
-    legendText: {
-      color: colors.textMuted,
-      fontSize: 10.5,
-      marginLeft: spacing.xxs,
     },
     sleepRow: {
       paddingVertical: spacing.sm,
