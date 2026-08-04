@@ -17,5 +17,22 @@ export const formatTimeRange = (startedAtIso: string, endedAtIso: string | null)
   return `${startLabel} – ${TIME_FORMATTER.format(new Date(endedAtIso))}`;
 };
 
-export const formatSessionDate = (startedAtIso: string): string =>
-  new Date(startedAtIso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const startOfLocalDay = (date: Date): number =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+// "Today"/"Yesterday" for the last 2 calendar days (local time), otherwise
+// "Jul 27" — lets a session list spanning multiple days (e.g. Home's Recent
+// sessions, which isn't scoped to today anymore) read at a glance without
+// the user doing date math themselves.
+export const formatSessionDate = (startedAtIso: string): string => {
+  const sessionDate = new Date(startedAtIso);
+  const dayDiff = Math.round((startOfLocalDay(new Date()) - startOfLocalDay(sessionDate)) / 86400000);
+
+  if (dayDiff === 0) {
+    return "Today";
+  }
+  if (dayDiff === 1) {
+    return "Yesterday";
+  }
+  return sessionDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+};

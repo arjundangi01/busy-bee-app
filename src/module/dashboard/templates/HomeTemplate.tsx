@@ -12,10 +12,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Companion } from "@/components/content/Companion";
+import { SessionListRow } from "@/components/content/SessionListRow";
 import { StatCard } from "@/components/content/StatCard";
 import { TopBar } from "@/components/navigation/TopBar";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { useDashboard } from "@/module/dashboard/hooks/useDashboard";
+import { useRecentSessions } from "@/module/dashboard/hooks/useRecentSessions";
 import { ScreenTimeAppRow } from "@/module/progress/components/ScreenTimeAppRow";
 import { UsageAccessPrompt } from "@/module/progress/components/UsageAccessPrompt";
 import { useIngestUsageStats } from "@/module/progress/hooks/useIngestUsageStats";
@@ -25,17 +27,19 @@ import { routes } from "@/config/routes";
 import { useAuthStore } from "@/store/auth-store";
 import { IColorTokens, spacing, useColors } from "@/theme";
 import { formatMinutesAsHoursAndMinutes } from "@/lib/utils/format";
-import { ITrendDay } from "@/types";
+import { ISessionSummary, ITrendDay } from "@/types";
 import * as BlockingEnforcement from "../../../../modules/blocking-enforcement";
 
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 const NOT_ENOUGH_DATA_YET = "Not enough data yet";
 const SCREEN_TIME_APP_LIMIT = 5;
+const RECENT_SESSIONS_LIMIT = 2;
 
 export function HomeTemplate() {
   const colors = useColors();
   const styles = createStyles(colors);
   const { dashboard, isLoading, isRefetching, error, refresh } = useDashboard();
+  const { sessions: recentSessions, isLoading: isLoadingRecentSessions } = useRecentSessions(RECENT_SESSIONS_LIMIT);
   const { user } = useAuthStore();
   const { progress, isLoading: isProgressLoading } = useProgress();
   const isUsageAccessGranted = useUsageAccessStatus();
@@ -60,6 +64,10 @@ export function HomeTemplate() {
       }
     }
     router.push(routes.startMission());
+  };
+
+  const handleSessionPress = (session: ISessionSummary) => {
+    router.push(routes.sessionTimeline(session.id));
   };
 
   if (isLoading && !dashboard) {
@@ -165,6 +173,24 @@ export function HomeTemplate() {
                 </Text>
               </StatCard>
             </Pressable>
+
+            {!isLoadingRecentSessions && recentSessions.length > 0 && (
+              <StatCard>
+                <Text style={styles.sectionLabel}>Recent sessions</Text>
+                {recentSessions.map((session) => (
+                  <SessionListRow key={session.id} session={session} onPress={handleSessionPress} showDate />
+                ))}
+                <Pressable
+                  style={styles.seeAllRow}
+                  onPress={() => router.push(routes.history())}
+                  accessibilityRole="button"
+                  accessibilityLabel="See all sessions"
+                >
+                  <Text style={styles.seeAllLabel}>See all</Text>
+                  <Text style={styles.seeAllArrow}>→</Text>
+                </Pressable>
+              </StatCard>
+            )}
 
             <StatCard>
               <View style={styles.signalRow}>
@@ -339,6 +365,24 @@ const createStyles = (colors: IColorTokens) =>
     roughFlag: {
       color: colors.danger,
       fontWeight: "600",
+    },
+    seeAllRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingTop: spacing.sm,
+      marginTop: spacing.xs,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderSubtle,
+    },
+    seeAllLabel: {
+      color: colors.text,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    seeAllArrow: {
+      color: colors.textMuted,
+      fontSize: 12,
     },
     signalRow: {
       flexDirection: "row",

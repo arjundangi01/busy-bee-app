@@ -1,16 +1,14 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Companion } from "@/components/content/Companion";
 import { LabelValueRow } from "@/components/content/LabelValueRow";
-import { SessionListRow } from "@/components/content/SessionListRow";
 import { StatCard } from "@/components/content/StatCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { TopBar } from "@/components/navigation/TopBar";
 import { useDashboard } from "@/module/dashboard/hooks/useDashboard";
 import { routes } from "@/config/routes";
 import { formatMinutesAsHoursAndMinutes } from "@/lib/utils/format";
-import { ISessionSummary } from "@/types";
 import { IColorTokens, spacing, useColors } from "@/theme";
 
 type IEveningReviewState = "default" | "zero-backlog" | "no-sessions";
@@ -70,10 +68,6 @@ export function EveningReviewTemplate() {
     day: "numeric",
   });
 
-  const handleSessionPress = (session: ISessionSummary) => {
-    router.push(routes.sessionTimeline(session.id));
-  };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <TopBar variant="sub-screen" title="Today" trailingDate={trailingDate} onBack={() => router.push(routes.tabs.home())} />
@@ -92,26 +86,7 @@ export function EveningReviewTemplate() {
           <LabelValueRow label="Backlog remaining" value={`${dashboard.backlogCount}`} />
         </StatCard>
 
-        {dashboard.today.sessions.length > 0 && (
-          <StatCard style={styles.sessionsCard}>
-            <Text style={styles.sessionsLabel}>Today&apos;s sessions</Text>
-            {dashboard.today.sessions.map((session) => (
-              <SessionListRow key={session.id} session={session} onPress={handleSessionPress} />
-            ))}
-          </StatCard>
-        )}
-
         <Text style={styles.statusText}>{getStatusText(state, dashboard.backlogCount)}</Text>
-
-        <Pressable
-          style={styles.historyLink}
-          onPress={() => router.push(routes.history())}
-          accessibilityRole="button"
-          accessibilityLabel="See full history"
-        >
-          <Text style={styles.historyLinkLabel}>See full history</Text>
-          <Text style={styles.historyLinkArrow}>→</Text>
-        </Pressable>
 
         <View style={styles.spacer} />
 
@@ -158,36 +133,6 @@ const createStyles = (colors: IColorTokens) =>
       fontSize: 12,
       textAlign: "center",
       paddingTop: spacing.md,
-    },
-    sessionsCard: {
-      marginTop: spacing.md,
-    },
-    sessionsLabel: {
-      color: colors.textMuted,
-      fontSize: 10,
-      fontWeight: "600",
-      textTransform: "uppercase",
-      letterSpacing: 0.4,
-      marginBottom: spacing.xxs,
-    },
-    historyLink: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.xs,
-      marginTop: spacing.sm,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.borderSubtle,
-    },
-    historyLinkLabel: {
-      color: colors.text,
-      fontSize: 13,
-      fontWeight: "600",
-    },
-    historyLinkArrow: {
-      color: colors.textMuted,
-      fontSize: 13,
     },
     spacer: {
       flex: 1,
