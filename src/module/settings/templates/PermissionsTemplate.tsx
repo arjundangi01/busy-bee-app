@@ -28,7 +28,7 @@ export function PermissionsTemplate() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <TopBar variant="sub-screen" title="Permissions" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.intro}>

@@ -108,7 +108,7 @@ export function MissionDetailTemplate({ missionId }: MissionDetailTemplateProps)
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <BackButton onPress={() => router.back()} />
       </View>

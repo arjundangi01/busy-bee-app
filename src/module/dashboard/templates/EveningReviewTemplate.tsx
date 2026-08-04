@@ -69,7 +69,7 @@ export function EveningReviewTemplate() {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <TopBar variant="sub-screen" title="Today" trailingDate={trailingDate} onBack={() => router.push(routes.tabs.home())} />
       <View style={styles.content}>
         <View style={styles.companionZone}>

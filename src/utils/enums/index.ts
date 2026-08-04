@@ -24,6 +24,19 @@ export enum SESSION_ROUGHNESS {
   ROUGH = "rough",
 }
 
+// design-artifacts/evolution/specs/14-session-timeline.md -- how this
+// session's first blocked attempt compares to the user's own rolling
+// 8-week baseline, computed server-side. "clean" (no blocks) and "building"
+// (baseline doesn't have enough data yet) both carry no comparison claim.
+export enum SESSION_DISTRACTION_TIMING_TIER {
+  CLEAN = "clean",
+  BUILDING = "building",
+  EARLIER = "earlier",
+  TYPICAL = "typical",
+  LATER = "later",
+  HELD_LONG = "heldLong",
+}
+
 export enum SUBSCRIPTION_STATUS {
   ACTIVE = "ACTIVE",
   EXPIRED = "EXPIRED",

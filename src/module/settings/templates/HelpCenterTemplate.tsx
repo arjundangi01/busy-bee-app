@@ -27,7 +27,7 @@ export function HelpCenterTemplate() {
   const styles = createStyles(colors);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <TopBar variant="sub-screen" title="Help Center" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.section}>

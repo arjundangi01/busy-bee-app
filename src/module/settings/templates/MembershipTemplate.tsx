@@ -43,6 +43,10 @@ export function MembershipTemplate() {
   const { isPro, status, expiresAt, limits } = useEntitlement();
   const [proPackage, setProPackage] = useState<PurchasesPackage | null>(null);
 
+  console.log("isPro", isPro);
+  console.log("status", status);
+  console.log("expiresAt", expiresAt);
+  console.log("limits", limits);
   useEffect(() => {
     if (isPro) {
       getProPackage().then(setProPackage);
@@ -50,7 +54,7 @@ export function MembershipTemplate() {
   }, [isPro]);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <TopBar
         variant="sub-screen"
         title="Membership"

@@ -25,4 +25,7 @@ export enum PAYWALL_ENTRY {
   // `reason: "count" | "time"` param (like `missionId` already does for
   // SESSION_CAP) so the copy can say which limit was actually hit.
   MISSION_TASK_LIMIT = "missionTaskLimit",
+  // Session Timeline (Track 2 of Post-Session History) -- tapping a session
+  // row's locked body. design-artifacts/evolution/specs/14-session-timeline.md
+  SESSION_TIMELINE = "sessionTimeline",
 }

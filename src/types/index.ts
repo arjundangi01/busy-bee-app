@@ -1,4 +1,11 @@
-import { MISSION_STATUS, SESSION_END_REASON, SESSION_ROUGHNESS, SUBSCRIPTION_STATUS, TASK_STATUS } from "@/utils/enums";
+import {
+  MISSION_STATUS,
+  SESSION_DISTRACTION_TIMING_TIER,
+  SESSION_END_REASON,
+  SESSION_ROUGHNESS,
+  SUBSCRIPTION_STATUS,
+  TASK_STATUS,
+} from "@/utils/enums";
 
 export type IApiResponse<T> = {
   success: boolean;
@@ -137,6 +144,44 @@ export type ISessionSummary = {
 export type IPaginatedSessionHistory = {
   items: ISessionSummary[];
   nextCursor: string | null;
+};
+
+// design-artifacts/evolution/specs/14-session-timeline.md
+export type ISessionTimelineStep = {
+  id: string;
+  title: string;
+  startedAt: string;
+  completedAt: string | null;
+  actualSeconds: number;
+  estimatedMinutes: number | null;
+};
+
+export type ISessionTimelineDistraction = {
+  id: string;
+  occurredAt: string;
+  packageName: string;
+  appName: string | null;
+  stepId: string | null;
+};
+
+export type ISessionDistractionTiming = {
+  tier: SESSION_DISTRACTION_TIMING_TIER;
+  firstBlockElapsedSeconds: number | null;
+  firstBlockElapsedPercent: number | null;
+  baselineElapsedPercent: number | null;
+};
+
+export type ISessionTimeline = {
+  id: string;
+  missionId: string;
+  missionTitle: string;
+  startedAt: string;
+  endedAt: string;
+  sessionEndReason: SESSION_END_REASON | null;
+  roughness: SESSION_ROUGHNESS;
+  steps: ISessionTimelineStep[];
+  distractions: ISessionTimelineDistraction[];
+  distractionTiming: ISessionDistractionTiming;
 };
 
 export type ITodayCard = {

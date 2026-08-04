@@ -101,7 +101,7 @@ export function BlockedAppsTemplate() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <TopBar variant="sub-screen" title="Blocked Apps" onBack={() => router.back()} />
       <View style={styles.content}>
         <Text style={styles.intro}>

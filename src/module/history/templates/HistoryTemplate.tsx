@@ -18,7 +18,7 @@ export function HistoryTemplate() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <TopBar variant="sub-screen" title="History" onBack={() => router.back()} />
 
       <View style={styles.legend}>
