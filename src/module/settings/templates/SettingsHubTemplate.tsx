@@ -65,7 +65,6 @@ export function SettingsHubTemplate() {
                 </View>
               }
               onPress={() => router.push(routes.settingsPermissions())}
-              isLast={Platform.OS !== "android"}
             />
             {/* Android only — Apple's FamilyControls forces a system app picker with
                 no app-name access, so this screen can't be built the same way on iOS. */}
@@ -78,9 +77,18 @@ export function SettingsHubTemplate() {
                   </View>
                 }
                 onPress={() => router.push(routes.settingsBlockedApps())}
-                isLast
               />
             )}
+            <HubRow
+              label="Delete Account"
+              leading={
+                <View style={styles.iconBadge}>
+                  <Text style={styles.iconGlyph}>⊗</Text>
+                </View>
+              }
+              onPress={() => router.push(routes.settingsDeleteAccount())}
+              isLast
+            />
           </StatCard>
         </View>
 

@@ -15,6 +15,7 @@ export const routes = {
   settingsMembership: (): "/settings/membership" => "/settings/membership",
   settingsPermissions: (): "/settings/permissions" => "/settings/permissions",
   settingsBlockedApps: (): "/settings/blocked-apps" => "/settings/blocked-apps",
+  settingsDeleteAccount: (): "/settings/delete-account" => "/settings/delete-account",
   beesHive: (): "/bees-hive" => "/bees-hive",
   permissionPriming: (): "/permission-priming" => "/permission-priming",
   settingsHelpCenter: (): "/settings/help-center" => "/settings/help-center",
