@@ -19,11 +19,11 @@ const CONFIRM_PHRASE = "DELETE";
 // is the actual cancellation path for a Pro user deleting their account.
 const openSubscriptionManagement = () => {
   if (Platform.OS === "ios") {
-    Linking.openURL("https://apps.apple.com/account/subscriptions");
+    Linking.openURL("https://apps.apple.com/account/subscriptions").catch(() => {});
     return;
   }
   const androidPackage = Constants.expoConfig?.android?.package ?? "com.busybeeapp.app";
-  Linking.openURL(`https://play.google.com/store/account/subscriptions?package=${androidPackage}`);
+  Linking.openURL(`https://play.google.com/store/account/subscriptions?package=${androidPackage}`).catch(() => {});
 };
 
 export function DeleteAccountTemplate() {
@@ -38,8 +38,13 @@ export function DeleteAccountTemplate() {
 
   const handleDelete = async () => {
     if (!canDelete) return;
-    await deleteAccount();
-    await signOut();
+    try {
+      await deleteAccount();
+      await signOut();
+    } catch {
+      // Surfaced via useDeleteAccount()'s `error` string below — nothing
+      // further to do here, just don't let this reject unhandled.
+    }
   };
 
   return (
