@@ -83,6 +83,7 @@ export function FocusSessionTemplate({
   );
 
   const [focusSessionId, setFocusSessionId] = useState<string | null>(null);
+  const [focusSessionExpiresAt, setFocusSessionExpiresAt] = useState<string | null>(null);
   const [sessionWorkTypeId, setSessionWorkTypeId] = useState<string | null>(
     null,
   );
@@ -111,12 +112,14 @@ export function FocusSessionTemplate({
     blockedPackageNames: blockedApps.map((app) => app.packageName),
     currentStepText: currentTask?.title ?? "",
     currentWorkUnit,
+    expiresAt: focusSessionExpiresAt,
   });
 
   useEffect(() => {
     start(missionId)
       .then((session) => {
         setFocusSessionId(session.id);
+        setFocusSessionExpiresAt(session.expiredAt);
         setSessionWorkTypeId(session.workTypeId);
         // Seed from the server's startedAt rather than assuming 0 — matters
         // when adopting an already-running session (see SESSION_ALREADY_ACTIVE
@@ -134,7 +137,23 @@ export function FocusSessionTemplate({
         const code = getErrorCode(error);
 
         if (code === FOCUS_SESSION_ERROR_CODE.SESSION_ALREADY_ACTIVE) {
-          const active = await fetchActiveFocusSession();
+          let active;
+          try {
+            active = await fetchActiveFocusSession();
+          } catch {
+            // Backend unreachable right when we need it most: there IS a
+            // session (the SESSION_ALREADY_ACTIVE we just caught proves
+            // it), we just can't fetch its details to resume the screen
+            // properly. Don't strand the user on a dead-end error with no
+            // way to reach Exit — BlockingEnforcement.clearActiveSession()
+            // needs no session id, so a bare exit control still works even
+            // without focusSessionId ever getting set. See
+            // handleEarlyExit's own fallback for the other half of this.
+            setStartError(
+              "Couldn't reach the server to resume your session — you can still exit below.",
+            );
+            return;
+          }
           if (active && active.missionId !== missionId) {
             // The active session belongs to a different mission — send the
             // user to that screen instead of grafting foreign state in here.
@@ -143,6 +162,7 @@ export function FocusSessionTemplate({
           }
           if (active) {
             setFocusSessionId(active.id);
+            setFocusSessionExpiresAt(active.expiredAt);
             setSessionWorkTypeId(active.workTypeId);
             setElapsedSeconds(
               Math.max(
@@ -199,16 +219,22 @@ export function FocusSessionTemplate({
     if (elapsedSeconds < sessionDurationCapSeconds) return;
 
     timeLimitHandledRef.current = true;
+    // The device-local unblock must never depend on this call succeeding —
+    // see docs/session-lifecycle-reliability-fixes.md item 5. A failed
+    // end() here still gets reconciled later by the backend's own
+    // expiredAt/cron backstop once connectivity returns.
     end({
       focusSessionId,
       sessionEndReason: SESSION_END_REASON.TIME_LIMIT_REACHED,
-    }).then(() => {
-      BlockingEnforcement.clearActiveSession();
-      router.replace({
-        pathname: "/paywall",
-        params: { entry: PAYWALL_ENTRY.SESSION_TIME_LIMIT },
+    })
+      .catch(() => {})
+      .finally(() => {
+        BlockingEnforcement.clearActiveSession();
+        router.replace({
+          pathname: "/paywall",
+          params: { entry: PAYWALL_ENTRY.SESSION_TIME_LIMIT },
+        });
       });
-    });
   }, [sessionDurationCapSeconds, focusSessionId, elapsedSeconds, end]);
 
   useEffect(() => {
@@ -250,20 +276,40 @@ export function FocusSessionTemplate({
       return;
     }
 
-    const session = await end({
-      focusSessionId,
-      sessionEndReason: SESSION_END_REASON.MISSION_COMPLETED,
-    });
+    // Same local-first shape as the auto-end effect above: the backend call
+    // is best-effort, the device unblock is not gated on it succeeding.
+    let session = null;
+    try {
+      session = await end({
+        focusSessionId,
+        sessionEndReason: SESSION_END_REASON.MISSION_COMPLETED,
+      });
+    } catch {
+      // Real blockedAttemptCount is still safely recorded server-side and
+      // will be reconciled by the cron backstop — this only degrades the
+      // number shown on the very next screen.
+    }
     BlockingEnforcement.clearActiveSession();
-    goToSessionComplete(newStepsCompleted, session.blockedAttemptCount);
+    goToSessionComplete(newStepsCompleted, session?.blockedAttemptCount ?? 0);
   };
 
   const handleEarlyExit = async () => {
-    if (!focusSessionId) return;
-    await end({
-      focusSessionId,
-      sessionEndReason: SESSION_END_REASON.EARLY_EXIT,
-    });
+    // No hard `if (!focusSessionId) return` bail here on purpose: if the
+    // backend was unreachable when resuming an already-active session (see
+    // the SESSION_ALREADY_ACTIVE catch above), focusSessionId can be null
+    // even though a real session — and real device blocking — exists. This
+    // is the last-resort escape: clear native blocking and leave, skipping
+    // only the backend call we have no session id to make anyway.
+    try {
+      if (focusSessionId) {
+        await end({
+          focusSessionId,
+          sessionEndReason: SESSION_END_REASON.EARLY_EXIT,
+        });
+      }
+    } catch {
+      // Best-effort — see docs/session-lifecycle-reliability-fixes.md item 5.
+    }
     BlockingEnforcement.clearActiveSession();
     router.replace(routes.tabs.home());
   };
@@ -275,7 +321,16 @@ export function FocusSessionTemplate({
           <Text style={styles.startErrorText}>{startError}</Text>
           <PrimaryButton
             label="Back to Home"
-            onPress={() => router.replace(routes.tabs.home())}
+            // Always clears native blocking, whether or not one was
+            // actually active — a harmless no-op in the common case, and
+            // the only reachable escape when a session exists (proven by
+            // SESSION_ALREADY_ACTIVE) but its details couldn't be fetched
+            // to reach the normal Exit control. See
+            // docs/session-lifecycle-reliability-fixes.md item 5.
+            onPress={() => {
+              BlockingEnforcement.clearActiveSession();
+              router.replace(routes.tabs.home());
+            }}
           />
         </View>
       </SafeAreaView>

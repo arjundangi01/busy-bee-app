@@ -12,6 +12,7 @@ type BlockingEnforcementNativeModule = {
     missionId: string,
     blockedPackages: string[],
     currentStepText: string,
+    expiresAtEpochMillis: number,
   ) => Promise<void>;
   updateCurrentStep: (stepText: string) => Promise<void>;
   clearActiveSession: () => Promise<void>;
@@ -36,9 +37,16 @@ export async function setActiveSession(
   missionId: string,
   blockedPackages: string[],
   currentStepText: string,
+  expiresAtEpochMillis: number,
 ): Promise<void> {
   if (!isAvailable) return;
-  await NativeModule!.setActiveSession(sessionId, missionId, blockedPackages, currentStepText);
+  await NativeModule!.setActiveSession(
+    sessionId,
+    missionId,
+    blockedPackages,
+    currentStepText,
+    expiresAtEpochMillis,
+  );
 }
 
 export async function updateCurrentStep(stepText: string): Promise<void> {

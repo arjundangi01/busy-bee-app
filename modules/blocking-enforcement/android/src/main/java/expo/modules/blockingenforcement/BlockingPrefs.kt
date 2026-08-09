@@ -30,6 +30,7 @@ object BlockingPrefs {
     private const val KEY_BLOCKED_PACKAGES = "blocked_packages"
     private const val KEY_CURRENT_STEP_TEXT = "current_step_text"
     private const val KEY_ACTIVE_SESSION_STARTED_AT = "active_session_started_at"
+    private const val KEY_ACTIVE_SESSION_EXPIRES_AT = "active_session_expires_at"
     private const val KEY_PENDING_ATTEMPTS = "pending_blocked_attempts"
 
     // A rapid string of collisions (e.g. two blocked apps opened back to back
@@ -53,14 +54,17 @@ object BlockingPrefs {
         missionId: String,
         blockedPackages: List<String>,
         currentStepText: String,
+        expiresAtMillis: Long,
     ) {
         val p = prefs(context)
         // The JS side re-calls this (not just at session start) whenever the
         // blocklist changes mid-session, to keep the blocklist snapshot live —
-        // so only stamp startedAt the first time a given sessionId is seen.
-        // Restamping on every re-push would reset the foreground notification's
-        // elapsed-time display (FocusSessionForegroundService reads this same
-        // value) each time the user edits their blocklist during a session.
+        // so only stamp startedAt/expiresAt the first time a given sessionId
+        // is seen. Restamping on every re-push would reset the foreground
+        // notification's elapsed-time display (FocusSessionForegroundService
+        // reads this same startedAt value) each time the user edits their
+        // blocklist during a session, and would push expiry out from under
+        // the cap actually in force when the session started.
         val isNewSession = p.getString(KEY_ACTIVE_SESSION_ID, null) != sessionId
         val editor = p.edit()
             .putString(KEY_ACTIVE_SESSION_ID, sessionId)
@@ -69,6 +73,7 @@ object BlockingPrefs {
             .putString(KEY_CURRENT_STEP_TEXT, currentStepText)
         if (isNewSession) {
             editor.putLong(KEY_ACTIVE_SESSION_STARTED_AT, System.currentTimeMillis())
+            editor.putLong(KEY_ACTIVE_SESSION_EXPIRES_AT, expiresAtMillis)
         }
         editor.apply()
     }
@@ -84,6 +89,31 @@ object BlockingPrefs {
         return if (value == -1L) null else value
     }
 
+    // Locked in once at session start from the backend's effective duration
+    // cap (Free: real cap, Pro: 24h safety net) — see
+    // backend/lib/routes/focus-sessions/utils/sessionStatus.ts. Native
+    // enforces this timestamp directly rather than deriving its own cap, so
+    // there's exactly one place (the backend) that decides what the cap is.
+    fun getActiveSessionExpiresAtMillis(context: Context): Long? {
+        val value = prefs(context).getLong(KEY_ACTIVE_SESSION_EXPIRES_AT, -1L)
+        return if (value == -1L) null else value
+    }
+
+    // Shared by BlockingAccessibilityService's reactive per-event check and
+    // FocusSessionExpiryWorker's scheduled backstop — both need the exact
+    // same "is this session past its expiry, and if so clean it up" logic,
+    // so it lives here once rather than being reimplemented in two places.
+    // Returns true if it cleared an expired session (caller should also stop
+    // the foreground notification service), false otherwise (nothing to do,
+    // whether because there's no active session or it hasn't expired yet).
+    fun clearIfExpired(context: Context, now: Long = System.currentTimeMillis()): Boolean {
+        if (getActiveSessionId(context) == null) return false
+        val expiresAt = getActiveSessionExpiresAtMillis(context) ?: return false
+        if (now < expiresAt) return false
+        clearActiveSession(context)
+        return true
+    }
+
     fun updateCurrentStep(context: Context, stepText: String) {
         prefs(context).edit().putString(KEY_CURRENT_STEP_TEXT, stepText).apply()
     }
@@ -95,6 +125,7 @@ object BlockingPrefs {
             .remove(KEY_BLOCKED_PACKAGES)
             .remove(KEY_CURRENT_STEP_TEXT)
             .remove(KEY_ACTIVE_SESSION_STARTED_AT)
+            .remove(KEY_ACTIVE_SESSION_EXPIRES_AT)
             .apply()
     }
 

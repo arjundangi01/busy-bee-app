@@ -21,4 +21,11 @@ dependencies {
   // version here and let the app's own resolution win instead.
   implementation "androidx.appcompat:appcompat:1.7.0"
   implementation "androidx.core:core-ktx:1.13.1"
+  // Schedules FocusSessionExpiryWorker's one-shot expiry job — chosen over
+  // AlarmManager because it persists its queue and auto-reschedules across
+  // reboot with no extra BroadcastReceiver code, and doesn't need Android
+  // 12+'s exact-alarm permission (a few minutes of Doze-induced slack on
+  // "stop blocking" is fine; BlockingAccessibilityService's own reactive
+  // check is the exact-timing backstop for that gap).
+  implementation "androidx.work:work-runtime-ktx:2.9.1"
 }

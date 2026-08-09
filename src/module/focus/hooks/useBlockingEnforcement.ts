@@ -9,6 +9,14 @@ type UseBlockingEnforcementArgs = {
   missionId: string;
   blockedPackageNames: string[];
   currentStepText: string;
+  // ISO timestamp from the session DTO — the cap/safety-net deadline the
+  // backend already computed (see sessionStatus.ts). Native enforces this
+  // exact value rather than deriving its own, so there's one source of
+  // truth for "when does this session expire" end to end. Null until the
+  // session DTO has actually resolved (start()/resume both set focusSessionId
+  // and this together, but as separate useState calls) — the push effect
+  // below waits for both.
+  expiresAt: string | null;
   // The work-unit index the Companion is currently rendering (see
   // computeCurrentWorkUnit) — used only to derive when "distracted" should
   // clear back to "at-work": the moment this advances past the unit a
@@ -30,6 +38,7 @@ export function useBlockingEnforcement({
   blockedPackageNames,
   currentStepText,
   currentWorkUnit,
+  expiresAt,
 }: UseBlockingEnforcementArgs) {
   const { recordBlockedAttempt } = useRecordBlockedAttempt();
   const lastStepTextRef = useRef<string | null>(null);
@@ -97,22 +106,36 @@ export function useBlockingEnforcement({
   // change (via the effect cleanup), never a repeating interval.
   const pushedSessionIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!focusSessionId) return;
+    if (!focusSessionId || !expiresAt) return;
+
+    const expiresAtEpochMillis = new Date(expiresAt).getTime();
 
     if (pushedSessionIdRef.current !== focusSessionId) {
       pushedSessionIdRef.current = focusSessionId;
-      BlockingEnforcement.setActiveSession(focusSessionId, missionId, blockedPackageNames, currentStepText);
+      BlockingEnforcement.setActiveSession(
+        focusSessionId,
+        missionId,
+        blockedPackageNames,
+        currentStepText,
+        expiresAtEpochMillis,
+      );
       return;
     }
 
     const timeout = setTimeout(() => {
-      BlockingEnforcement.setActiveSession(focusSessionId, missionId, blockedPackageNames, currentStepText);
+      BlockingEnforcement.setActiveSession(
+        focusSessionId,
+        missionId,
+        blockedPackageNames,
+        currentStepText,
+        expiresAtEpochMillis,
+      );
     }, 400);
     return () => clearTimeout(timeout);
     // currentStepText intentionally omitted — its own effect below handles
     // in-session step changes without re-pushing the whole blocklist.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusSessionId, missionId, blockedPackageNames.join(",")]);
+  }, [focusSessionId, missionId, blockedPackageNames.join(","), expiresAt]);
 
   // Step text changes far less often than elapsedSeconds ticks — push only
   // on a real change, not every second.

@@ -118,6 +118,7 @@ export type IFocusSession = {
   missionId: string;
   startedAt: string;
   endedAt: string | null;
+  expiredAt: string;
   elapsedSeconds: number | null;
   sessionEndReason: SESSION_END_REASON | null;
   blockedAttemptCount: number;

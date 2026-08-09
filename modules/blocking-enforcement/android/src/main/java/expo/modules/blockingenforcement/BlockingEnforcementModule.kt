@@ -6,11 +6,20 @@ import android.content.Intent
 import android.provider.Settings
 import android.text.TextUtils
 import androidx.core.content.ContextCompat
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.records.Field
 import expo.modules.kotlin.records.Record
+import java.util.concurrent.TimeUnit
+
+// Unique work name so a new session's scheduled expiry always replaces any
+// stale pending job (ExistingWorkPolicy.REPLACE below) instead of needing
+// manual bookkeeping of a previous request's id.
+private const val EXPIRY_WORK_NAME = "focus-session-expiry"
 
 class PendingBlockedAttemptRecord(
     @Field
@@ -32,6 +41,7 @@ class BlockingEnforcementModule : Module() {
                 missionId: String,
                 blockedPackages: List<String>,
                 currentStepText: String,
+                expiresAtEpochMillis: Double,
             ->
             val context = requireContext()
             // Persisted first, unconditionally — this is what
@@ -39,13 +49,21 @@ class BlockingEnforcementModule : Module() {
             // to block. The foreground service below is presence/
             // notification only; its failure must never look like the
             // session failed to start.
-            BlockingPrefs.setActiveSession(context, sessionId, missionId, blockedPackages, currentStepText)
+            BlockingPrefs.setActiveSession(
+                context,
+                sessionId,
+                missionId,
+                blockedPackages,
+                currentStepText,
+                expiresAtEpochMillis.toLong(),
+            )
             try {
                 ContextCompat.startForegroundService(context, Intent(context, FocusSessionForegroundService::class.java))
             } catch (error: Exception) {
                 // Best-effort — see the matching try/catch in
                 // BlockingAccessibilityService's self-heal call.
             }
+            scheduleExpiryWork(context, expiresAtEpochMillis.toLong())
         }
 
         AsyncFunction("updateCurrentStep") { stepText: String ->
@@ -59,6 +77,7 @@ class BlockingEnforcementModule : Module() {
             val context = requireContext()
             BlockingPrefs.clearActiveSession(context)
             context.stopService(Intent(context, FocusSessionForegroundService::class.java))
+            WorkManager.getInstance(context).cancelUniqueWork(EXPIRY_WORK_NAME)
         }
 
         // Consume-all: returns every unread collision (queued, not just the
@@ -88,6 +107,18 @@ class BlockingEnforcementModule : Module() {
     }
 
     private fun requireContext(): Context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+
+    // Delay clamped to >= 0 -- a session pushed with an already-past
+    // expiresAt (e.g. a slow app resume reconciling a long-abandoned
+    // session) should fire the worker immediately, not be rejected by
+    // WorkManager for a negative delay.
+    private fun scheduleExpiryWork(context: Context, expiresAtEpochMillis: Long) {
+        val delayMillis = (expiresAtEpochMillis - System.currentTimeMillis()).coerceAtLeast(0)
+        val request = OneTimeWorkRequestBuilder<FocusSessionExpiryWorker>()
+            .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(EXPIRY_WORK_NAME, ExistingWorkPolicy.REPLACE, request)
+    }
 
     // Standard ENABLED_ACCESSIBILITY_SERVICES colon-separated-list check —
     // there is no dedicated API for "is my specific service enabled", this

@@ -6,12 +6,14 @@ import { queryClient } from "@/lib/query-client";
 import { configureGoogleSignIn } from "@/lib/googleAuth";
 import { initPurchases } from "@/lib/purchases";
 import { OnboardingPermissionsProvider } from "@/module/onboarding/context/OnboardingPermissionsContext";
+import { useSessionReconciliation } from "@/module/focus/hooks/useSessionReconciliation";
 import { AuthProvider, useAuthStore } from "@/store/auth-store";
 import { ThemeProvider, useColors } from "@/theme";
 
 function RootNavigator() {
   const colors = useColors();
   const { user } = useAuthStore();
+  useSessionReconciliation(!!user);
 
   return (
     <Stack

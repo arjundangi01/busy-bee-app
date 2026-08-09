@@ -12,6 +12,21 @@ export async function fetchActiveFocusSession(): Promise<IFocusSession | null> {
   return response.data.data;
 }
 
+// Same imperative-function shape as fetchActiveFocusSession above — used
+// from auth-store's signOut() to best-effort end a still-active session
+// outside of any component render, not just from useFocusSession's own
+// mutation (which wraps this for the in-screen Done/Early Exit/time-limit
+// paths).
+export async function endFocusSession(
+  focusSessionId: string,
+  sessionEndReason: SESSION_END_REASON,
+): Promise<IFocusSession> {
+  const response = await apiClient.post<IApiResponse<IFocusSession>>(`/focus-sessions/${focusSessionId}/end`, {
+    sessionEndReason,
+  });
+  return response.data.data as IFocusSession;
+}
+
 export function useFocusSession() {
   const queryClient = useQueryClient();
 
@@ -25,19 +40,13 @@ export function useFocusSession() {
 
   const endMutation = useMutation({
     mutationKey: ["focus-sessions", "end"],
-    mutationFn: async ({
+    mutationFn: ({
       focusSessionId,
       sessionEndReason,
     }: {
       focusSessionId: string;
       sessionEndReason: SESSION_END_REASON;
-    }) => {
-      const response = await apiClient.post<IApiResponse<IFocusSession>>(
-        `/focus-sessions/${focusSessionId}/end`,
-        { sessionEndReason },
-      );
-      return response.data.data as IFocusSession;
-    },
+    }) => endFocusSession(focusSessionId, sessionEndReason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },

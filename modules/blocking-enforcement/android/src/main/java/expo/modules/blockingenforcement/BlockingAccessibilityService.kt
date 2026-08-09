@@ -40,6 +40,18 @@ class BlockingAccessibilityService : AccessibilityService() {
         // No active session — nothing to enforce right now.
         BlockingPrefs.getActiveSessionId(this) ?: return
 
+        // Reactive half of self-expiry (the other half is
+        // FocusSessionExpiryWorker, a scheduled backstop for when the phone
+        // sits idle and no foreground-app event ever fires). Checked on the
+        // same hot path this service already runs on every app switch, so a
+        // session whose cap/24h safety net has passed stops blocking the
+        // instant the user actually tries to open something — no dependency
+        // on the JS side being alive.
+        if (BlockingPrefs.clearIfExpired(this)) {
+            stopService(Intent(this, FocusSessionForegroundService::class.java))
+            return
+        }
+
         // The actual blocking decision — deliberately made and acted on
         // before the self-heal call below, and never allowed to be skipped
         // by it (see the try/catch there): the notification presence is a
