@@ -1,6 +1,8 @@
 package expo.modules.blockingenforcement
 
 import android.content.Context
+import org.json.JSONArray
+import org.json.JSONException
 
 /**
  * Single source of truth shared between the Expo module (JS-driven writes),
@@ -11,6 +13,14 @@ import android.content.Context
  * restarted independently of the AccessibilityService — a plain in-memory
  * object would silently go stale the moment that happens, which is exactly
  * the kind of "quietly stops working" failure this feature can't afford.
+ *
+ * Known limitation, by design: this is per-device local storage, not synced
+ * through the backend. A session started (or a blocklist edited) on one
+ * device has no effect on enforcement on a second device signed into the
+ * same account — following a session across devices would need the backend
+ * to actively push state to a device that may not have any Busy Bee screen
+ * open at all, which is a real feature (push infrastructure) on its own,
+ * not something to bolt on here.
  */
 object BlockingPrefs {
     private const val PREFS_NAME = "blocking_enforcement_prefs"
@@ -20,8 +30,14 @@ object BlockingPrefs {
     private const val KEY_BLOCKED_PACKAGES = "blocked_packages"
     private const val KEY_CURRENT_STEP_TEXT = "current_step_text"
     private const val KEY_ACTIVE_SESSION_STARTED_AT = "active_session_started_at"
-    private const val KEY_PENDING_PACKAGE = "pending_blocked_package"
-    private const val KEY_PENDING_AT = "pending_blocked_at"
+    private const val KEY_PENDING_ATTEMPTS = "pending_blocked_attempts"
+
+    // A rapid string of collisions (e.g. two blocked apps opened back to back
+    // before the JS side next comes to the foreground to consume them) queues
+    // up here instead of overwriting a single slot. Capped, not unbounded —
+    // this is "a few collisions between one foreground check and the next,"
+    // never a growing log.
+    private const val MAX_PENDING_ATTEMPTS = 5
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -38,13 +54,23 @@ object BlockingPrefs {
         blockedPackages: List<String>,
         currentStepText: String,
     ) {
-        prefs(context).edit()
+        val p = prefs(context)
+        // The JS side re-calls this (not just at session start) whenever the
+        // blocklist changes mid-session, to keep the blocklist snapshot live —
+        // so only stamp startedAt the first time a given sessionId is seen.
+        // Restamping on every re-push would reset the foreground notification's
+        // elapsed-time display (FocusSessionForegroundService reads this same
+        // value) each time the user edits their blocklist during a session.
+        val isNewSession = p.getString(KEY_ACTIVE_SESSION_ID, null) != sessionId
+        val editor = p.edit()
             .putString(KEY_ACTIVE_SESSION_ID, sessionId)
             .putString(KEY_ACTIVE_MISSION_ID, missionId)
             .putStringSet(KEY_BLOCKED_PACKAGES, blockedPackages.toSet())
             .putString(KEY_CURRENT_STEP_TEXT, currentStepText)
-            .putLong(KEY_ACTIVE_SESSION_STARTED_AT, System.currentTimeMillis())
-            .apply()
+        if (isNewSession) {
+            editor.putLong(KEY_ACTIVE_SESSION_STARTED_AT, System.currentTimeMillis())
+        }
+        editor.apply()
     }
 
     fun getActiveMissionId(context: Context): String? = prefs(context).getString(KEY_ACTIVE_MISSION_ID, null)
@@ -74,32 +100,78 @@ object BlockingPrefs {
 
     fun getActiveSessionId(context: Context): String? = prefs(context).getString(KEY_ACTIVE_SESSION_ID, null)
 
+    // Lets the interstitial Activity notice the session ending while it's
+    // still on screen (e.g. a time-limit cutoff elsewhere) without polling —
+    // this is a plain SharedPreferences change callback, only fires when
+    // clearActiveSession/setActiveSession actually write, and only while a
+    // caller is registered (the Activity registers in onStart, unregisters
+    // in onStop, so this costs nothing while the screen isn't visible).
+    fun registerChangeListener(context: Context, listener: android.content.SharedPreferences.OnSharedPreferenceChangeListener) {
+        prefs(context).registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    fun unregisterChangeListener(context: Context, listener: android.content.SharedPreferences.OnSharedPreferenceChangeListener) {
+        prefs(context).unregisterOnSharedPreferenceChangeListener(listener)
+    }
+
+    fun isActiveSessionKey(key: String?): Boolean = key == KEY_ACTIVE_SESSION_ID
+
     fun getBlockedPackages(context: Context): Set<String> =
         prefs(context).getStringSet(KEY_BLOCKED_PACKAGES, emptySet()) ?: emptySet()
 
     fun getCurrentStepText(context: Context): String? = prefs(context).getString(KEY_CURRENT_STEP_TEXT, null)
 
-    /**
-     * Recorded by the AccessibilityService the instant a real collision is
-     * detected. Consume-once by design (get + clear together) so a slow or
-     * backgrounded JS side can never double-fire the blocked-attempt API
-     * call for the same collision, and a stale pending record can never
-     * linger past the app actually reading it.
-     */
-    fun recordPendingBlockedAttempt(context: Context, packageName: String) {
-        prefs(context).edit()
-            .putString(KEY_PENDING_PACKAGE, packageName)
-            .putLong(KEY_PENDING_AT, System.currentTimeMillis())
-            .apply()
-    }
-
     data class PendingBlockedAttempt(val packageName: String, val occurredAtMillis: Long)
 
-    fun consumePendingBlockedAttempt(context: Context): PendingBlockedAttempt? {
+    /**
+     * Recorded by the AccessibilityService the instant a real collision is
+     * detected. Queued (capped at MAX_PENDING_ATTEMPTS, oldest dropped past
+     * that) rather than a single overwritable slot, so two collisions
+     * happening before the JS side next comes to the foreground don't lose
+     * one of them. Consume-all-by-design (get + clear together in
+     * consumePendingBlockedAttempts) so a slow or backgrounded JS side can
+     * never double-fire the blocked-attempt API call for the same collision.
+     */
+    fun recordPendingBlockedAttempt(context: Context, packageName: String) {
         val p = prefs(context)
-        val packageName = p.getString(KEY_PENDING_PACKAGE, null) ?: return null
-        val occurredAt = p.getLong(KEY_PENDING_AT, 0L)
-        p.edit().remove(KEY_PENDING_PACKAGE).remove(KEY_PENDING_AT).apply()
-        return PendingBlockedAttempt(packageName, occurredAt)
+        val updated = (readPendingAttempts(p) + PendingBlockedAttempt(packageName, System.currentTimeMillis()))
+            .takeLast(MAX_PENDING_ATTEMPTS)
+        p.edit().putString(KEY_PENDING_ATTEMPTS, serializePendingAttempts(updated)).apply()
+    }
+
+    fun consumePendingBlockedAttempts(context: Context): List<PendingBlockedAttempt> {
+        val p = prefs(context)
+        val attempts = readPendingAttempts(p)
+        if (attempts.isNotEmpty()) {
+            p.edit().remove(KEY_PENDING_ATTEMPTS).apply()
+        }
+        return attempts
+    }
+
+    private fun readPendingAttempts(p: android.content.SharedPreferences): List<PendingBlockedAttempt> {
+        val raw = p.getString(KEY_PENDING_ATTEMPTS, null) ?: return emptyList()
+        return try {
+            val array = JSONArray(raw)
+            (0 until array.length()).map { i ->
+                val entry = array.getJSONObject(i)
+                PendingBlockedAttempt(entry.getString("packageName"), entry.getLong("occurredAtMillis"))
+            }
+        } catch (error: JSONException) {
+            // Corrupt/unexpected stored value — treat as no pending attempts
+            // rather than crashing the AccessibilityService that called this.
+            emptyList()
+        }
+    }
+
+    private fun serializePendingAttempts(attempts: List<PendingBlockedAttempt>): String {
+        val array = JSONArray()
+        attempts.forEach { attempt ->
+            array.put(
+                org.json.JSONObject()
+                    .put("packageName", attempt.packageName)
+                    .put("occurredAtMillis", attempt.occurredAtMillis),
+            )
+        }
+        return array.toString()
     }
 }

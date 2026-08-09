@@ -1,6 +1,7 @@
 package expo.modules.blockingenforcement
 
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Button
@@ -21,10 +22,57 @@ class BlockedAppInterstitialActivity : AppCompatActivity() {
         const val EXTRA_PACKAGE_NAME = "expo.modules.blockingenforcement.EXTRA_PACKAGE_NAME"
     }
 
+    // Reacts to the session ending (e.g. a time-limit cutoff) while this
+    // screen is still on screen, without polling — see
+    // BlockingPrefs.registerChangeListener's comment. Held as a class
+    // property (not created inline at register time) so it isn't eligible
+    // for GC between onStart and onStop.
+    private val activeSessionListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (BlockingPrefs.isActiveSessionKey(key) && BlockingPrefs.getActiveSessionId(this) == null) {
+                finish()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Covers the case where the session already ended by the time this
+        // screen is actually created (e.g. it ended in the moment between
+        // detection and this Activity launching) — nothing to show.
+        if (BlockingPrefs.getActiveSessionId(this) == null) {
+            finish()
+            return
+        }
         setContentView(R.layout.activity_blocked_interstitial)
+        findViewById<Button>(R.id.interstitial_cta).setOnClickListener { returnToBusyBee() }
+        renderForIntent(intent)
+    }
 
+    // launchMode="singleTask" means a second collision while this screen is
+    // already showing reuses this instance instead of creating a new one —
+    // onCreate never runs again, only this. Without re-rendering here, the
+    // screen would keep showing whichever app was blocked first.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (BlockingPrefs.getActiveSessionId(this) == null) {
+            finish()
+            return
+        }
+        renderForIntent(intent)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        BlockingPrefs.registerChangeListener(this, activeSessionListener)
+    }
+
+    override fun onStop() {
+        BlockingPrefs.unregisterChangeListener(this, activeSessionListener)
+        super.onStop()
+    }
+
+    private fun renderForIntent(intent: Intent) {
         val blockedPackageName = intent.getStringExtra(EXTRA_PACKAGE_NAME)
         val appLabel = resolveAppLabel(blockedPackageName)
         val stepText = BlockingPrefs.getCurrentStepText(this)
@@ -37,8 +85,6 @@ class BlockedAppInterstitialActivity : AppCompatActivity() {
         } else {
             getString(R.string.interstitial_subcopy_no_step)
         }
-
-        findViewById<Button>(R.id.interstitial_cta).setOnClickListener { returnToBusyBee() }
     }
 
     // A real installed app always resolves via getApplicationInfo, but this

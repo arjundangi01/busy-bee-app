@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
+  AppStateStatus,
   Platform,
   Pressable,
   RefreshControl,
@@ -46,6 +49,26 @@ export function HomeTemplate() {
   const { isSyncing: isSyncingUsageStats } = useIngestUsageStats(isUsageAccessGranted);
   const screenTimeApps = progress?.screenTime?.apps ?? [];
   const screenTimeMaxSeconds = screenTimeApps[0]?.foregroundSeconds ?? 0;
+
+  // Same isAccessibilityServiceEnabled check FocusSessionTemplate does while
+  // it's mounted — surfaced here too because a session can now stay active
+  // while you're away from that screen (e.g. in Settings editing the
+  // blocklist), and the permission being revoked mid-session would otherwise
+  // go unnoticed until you happen to navigate back into it.
+  const [isEnforcementActive, setIsEnforcementActive] = useState(true);
+  useEffect(() => {
+    if (!dashboard?.activeSession || Platform.OS !== "android") return;
+
+    const checkEnforcement = () => {
+      BlockingEnforcement.isAccessibilityServiceEnabled().then(setIsEnforcementActive);
+    };
+
+    checkEnforcement();
+    const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
+      if (nextState === "active") checkEnforcement();
+    });
+    return () => subscription.remove();
+  }, [dashboard?.activeSession]);
 
   // One-time just-in-time permission nudge (design-artifacts/evolution/specs/
   // 06-permission-priming.md) — routes through it instead of straight to
@@ -116,6 +139,11 @@ export function HomeTemplate() {
                 <StatCard style={styles.activeSessionCard}>
                   <Text style={styles.activeSessionHeadline}>Focus session in progress</Text>
                   <Text style={styles.activeSessionMeta}>Tap to resume</Text>
+                  {!isEnforcementActive && (
+                    <Text style={styles.activeSessionWarning}>
+                      Blocking permission is off — resume to fix it
+                    </Text>
+                  )}
                 </StatCard>
               </Pressable>
             )}
@@ -350,6 +378,12 @@ const createStyles = (colors: IColorTokens) =>
       color: colors.textSecondary,
       fontSize: 12,
       marginTop: spacing.xxxs,
+    },
+    activeSessionWarning: {
+      color: colors.warning,
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: spacing.xxs,
     },
     todayHeadline: {
       color: colors.text,

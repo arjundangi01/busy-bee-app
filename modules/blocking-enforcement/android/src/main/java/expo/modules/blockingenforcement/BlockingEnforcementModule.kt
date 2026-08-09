@@ -23,9 +23,10 @@ class BlockingEnforcementModule : Module() {
     override fun definition() = ModuleDefinition {
         Name("BlockingEnforcement")
 
-        // Called at Focus Session start (and whenever the current step
-        // changes, via updateCurrentStep) — pushes the state the
-        // AccessibilityService reads on every foreground-app event.
+        // Called at Focus Session start, whenever the current step changes
+        // (via updateCurrentStep), and whenever the blocklist itself changes
+        // mid-session — pushes the state the AccessibilityService reads on
+        // every foreground-app event.
         AsyncFunction("setActiveSession") {
                 sessionId: String,
                 missionId: String,
@@ -60,16 +61,18 @@ class BlockingEnforcementModule : Module() {
             context.stopService(Intent(context, FocusSessionForegroundService::class.java))
         }
 
-        // Consume-once: returns the most recent unread collision, if any,
-        // and clears it in the same call. Callers (useBlockingEnforcement)
-        // poll this on app-foreground so a collision that happened while
-        // the RN app itself was backgrounded is never lost or double-counted.
-        AsyncFunction("getPendingBlockedAttempt") {
-            val pending = BlockingPrefs.consumePendingBlockedAttempt(requireContext()) ?: return@AsyncFunction null
-            PendingBlockedAttemptRecord(
-                packageName = pending.packageName,
-                occurredAtMillis = pending.occurredAtMillis.toDouble(),
-            )
+        // Consume-all: returns every unread collision (queued, not just the
+        // latest — see BlockingPrefs' MAX_PENDING_ATTEMPTS cap) and clears
+        // them in the same call. Callers (useBlockingEnforcement) poll this
+        // on app-foreground so a collision that happened while the RN app
+        // itself was backgrounded is never lost or double-counted.
+        AsyncFunction("getPendingBlockedAttempts") {
+            BlockingPrefs.consumePendingBlockedAttempts(requireContext()).map { pending ->
+                PendingBlockedAttemptRecord(
+                    packageName = pending.packageName,
+                    occurredAtMillis = pending.occurredAtMillis.toDouble(),
+                )
+            }
         }
 
         AsyncFunction("isAccessibilityServiceEnabled") {

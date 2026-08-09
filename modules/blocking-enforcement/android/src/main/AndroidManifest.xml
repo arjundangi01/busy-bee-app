@@ -17,6 +17,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
+    <!-- Lets BootCompletedReceiver restart the ongoing-session notification
+         right after a reboot instead of leaving it absent until the next
+         real app-switch event. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application>
         <!--
           BIND_ACCESSIBILITY_SERVICE on the <service> itself is what makes this
@@ -67,5 +72,21 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Ongoing focus-session and app-blocking enforcement indicator" />
         </service>
+
+        <!--
+          exported="true" because BOOT_COMPLETED is delivered by the system
+          (a different UID from this app), not another app on the device —
+          BOOT_COMPLETED is a protected broadcast, so only the system can
+          actually send it regardless of this flag. The permission
+          requirement below is belt-and-suspenders on top of that.
+        -->
+        <receiver
+            android:name="expo.modules.blockingenforcement.BootCompletedReceiver"
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

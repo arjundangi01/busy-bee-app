@@ -32,7 +32,6 @@ export function useBlockingEnforcement({
   currentWorkUnit,
 }: UseBlockingEnforcementArgs) {
   const { recordBlockedAttempt } = useRecordBlockedAttempt();
-  const sessionStartedRef = useRef(false);
   const lastStepTextRef = useRef<string | null>(null);
   const [distractedSinceUnit, setDistractedSinceUnit] = useState<number | null>(null);
   // Read inside the AppState listener below instead of depending on the raw
@@ -88,13 +87,28 @@ export function useBlockingEnforcement({
     });
   }, [focusSessionId]);
 
-  // Pushes session identity + blocklist snapshot once the session exists.
-  // Re-runs only if the session/blocklist actually change, not on every
-  // render — each call crosses the native bridge.
+  // Pushes session identity + blocklist snapshot once the session exists,
+  // and again whenever the blocklist itself changes mid-session. The very
+  // first push for a given session goes out immediately (blocking should
+  // start right away, not 400ms late) — every push after that for the same
+  // session is debounced, so toggling several apps in Settings in quick
+  // succession collapses into one native push instead of one per toggle.
+  // This is a one-shot timer that gets cancelled and rescheduled on each
+  // change (via the effect cleanup), never a repeating interval.
+  const pushedSessionIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!focusSessionId) return;
-    sessionStartedRef.current = true;
-    BlockingEnforcement.setActiveSession(focusSessionId, missionId, blockedPackageNames, currentStepText);
+
+    if (pushedSessionIdRef.current !== focusSessionId) {
+      pushedSessionIdRef.current = focusSessionId;
+      BlockingEnforcement.setActiveSession(focusSessionId, missionId, blockedPackageNames, currentStepText);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      BlockingEnforcement.setActiveSession(focusSessionId, missionId, blockedPackageNames, currentStepText);
+    }, 400);
+    return () => clearTimeout(timeout);
     // currentStepText intentionally omitted — its own effect below handles
     // in-session step changes without re-pushing the whole blocklist.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -115,20 +129,24 @@ export function useBlockingEnforcement({
     // FocusSessionForegroundService (started/stopped alongside
     // setActiveSession/clearActiveSession) — it ticks its own elapsed-time
     // display so it survives the app being backgrounded or force-exited,
-    // independent of JS being alive. This listener now only checks for a
-    // collision that happened while backgrounded (the interstitial itself
-    // has no reach into JS) and records it — consume-once on the native
-    // side, so this can never double-record the same attempt.
+    // independent of JS being alive. This listener now only checks for
+    // collisions that happened while backgrounded (the interstitial itself
+    // has no reach into JS) and records them — consume-all on the native
+    // side (a small capped queue, not just the latest one), so back-to-back
+    // collisions before the app is foregrounded again are never lost, and
+    // none of them can be double-recorded.
     const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
       if (nextState === "active") {
-        BlockingEnforcement.getPendingBlockedAttempt().then((pending) => {
-          if (!pending) return;
+        BlockingEnforcement.getPendingBlockedAttempts().then((pending) => {
+          if (pending.length === 0) return;
           setDistractedSinceUnit(currentWorkUnitRef.current);
-          recordBlockedAttempt({ focusSessionId, packageName: pending.packageName }).catch(() => {
-            // Worth recording, never worth crashing an active session over
-            // if the network call itself fails — the pending record is
-            // already consumed, so this undercounts one attempt rather
-            // than retrying into a loop.
+          pending.forEach((attempt) => {
+            recordBlockedAttempt({ focusSessionId, packageName: attempt.packageName }).catch(() => {
+              // Worth recording, never worth crashing an active session over
+              // if the network call itself fails — the pending record is
+              // already consumed, so this undercounts one attempt rather
+              // than retrying into a loop.
+            });
           });
         });
       }
@@ -136,18 +154,6 @@ export function useBlockingEnforcement({
 
     return () => subscription.remove();
   }, [focusSessionId, recordBlockedAttempt]);
-
-  // Safety net alongside the explicit clearActiveSession() call at each real
-  // session-end path in FocusSessionTemplate — covers the component
-  // unmounting for any other reason without leaving the native side
-  // thinking a session is active forever.
-  useEffect(() => {
-    return () => {
-      if (sessionStartedRef.current) {
-        BlockingEnforcement.clearActiveSession();
-      }
-    };
-  }, []);
 
   const isDistracted = distractedSinceUnit !== null && distractedSinceUnit === currentWorkUnit;
 

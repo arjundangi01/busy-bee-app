@@ -11,8 +11,15 @@ import { BLOCKLIST_DEFAULT_APPS } from "@/module/settings/utils/constants";
 import { useAuthStore } from "@/store/auth-store";
 import { IColorTokens, spacing, useColors } from "@/theme";
 
+type BlockedAppListRow = InstalledApp & {
+  // True for a blocklist entry whose app isn't currently installed — it
+  // can't be toggled on (there's nothing to launch), only off, so it can
+  // finally be removed instead of sitting invisible in the blocklist forever.
+  notInstalled: boolean;
+};
+
 type BlockedAppRowProps = {
-  app: InstalledApp;
+  app: BlockedAppListRow;
   isBlocked: boolean;
   onToggle: (value: boolean) => void;
   disabled?: boolean;
@@ -28,6 +35,7 @@ function BlockedAppRow({ app, isBlocked, onToggle, disabled, isLast }: BlockedAp
       <Text style={[styles.dot, { color: isBlocked ? colors.text : colors.textSecondary }]}>●</Text>
       <View style={styles.rowText}>
         <Text style={styles.rowLabel}>{app.appName}</Text>
+        {app.notInstalled && <Text style={styles.rowSubLabel}>Not installed</Text>}
       </View>
       <Toggle
         value={isBlocked}
@@ -64,6 +72,18 @@ export function BlockedAppsTemplate() {
     () => new Set(blockedApps.map((app) => app.packageName)),
     [blockedApps],
   );
+
+  // Installed apps first (in their existing order), then any blocked
+  // package that isn't currently installed — both lists are small (a
+  // device's installed apps, or however many apps you've ever blocked), so
+  // this is a plain in-memory merge, not a query.
+  const rows: BlockedAppListRow[] = useMemo(() => {
+    const installedPackageNames = new Set(apps.map((app) => app.packageName));
+    const uninstalledBlocked = blockedApps
+      .filter((app) => !installedPackageNames.has(app.packageName))
+      .map((app) => ({ packageName: app.packageName, appName: app.appName, notInstalled: true }));
+    return [...apps.map((app) => ({ ...app, notInstalled: false })), ...uninstalledBlocked];
+  }, [apps, blockedApps]);
 
   useEffect(() => {
     if (hasSeededRef.current) return;
@@ -127,7 +147,7 @@ export function BlockedAppsTemplate() {
               <Text style={styles.settingUp}>Setting up your defaults…</Text>
             )}
             <FlatList
-              data={apps}
+              data={rows}
               keyExtractor={(item) => item.packageName}
               renderItem={({ item, index }) => (
                 <BlockedAppRow
@@ -139,7 +159,7 @@ export function BlockedAppsTemplate() {
                     pendingAddPackageName === item.packageName ||
                     pendingRemovePackageName === item.packageName
                   }
-                  isLast={index === apps.length - 1}
+                  isLast={index === rows.length - 1}
                 />
               )}
               ListEmptyComponent={<Text style={styles.empty}>No installed apps found.</Text>}
@@ -197,6 +217,10 @@ const createStyles = (colors: IColorTokens) =>
     rowLabel: {
       color: colors.text,
       fontSize: 16,
+    },
+    rowSubLabel: {
+      color: colors.textMuted,
+      fontSize: 11.5,
     },
     spinner: {
       marginTop: spacing.xl,

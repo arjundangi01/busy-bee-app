@@ -15,7 +15,7 @@ type BlockingEnforcementNativeModule = {
   ) => Promise<void>;
   updateCurrentStep: (stepText: string) => Promise<void>;
   clearActiveSession: () => Promise<void>;
-  getPendingBlockedAttempt: () => Promise<PendingBlockedAttempt | null>;
+  getPendingBlockedAttempts: () => Promise<PendingBlockedAttempt[]>;
   isAccessibilityServiceEnabled: () => Promise<boolean>;
   openAccessibilitySettings: () => Promise<void>;
 };
@@ -51,9 +51,9 @@ export async function clearActiveSession(): Promise<void> {
   await NativeModule!.clearActiveSession();
 }
 
-export async function getPendingBlockedAttempt(): Promise<PendingBlockedAttempt | null> {
-  if (!isAvailable) return null;
-  return NativeModule!.getPendingBlockedAttempt();
+export async function getPendingBlockedAttempts(): Promise<PendingBlockedAttempt[]> {
+  if (!isAvailable) return [];
+  return NativeModule!.getPendingBlockedAttempts();
 }
 
 export async function isAccessibilityServiceEnabled(): Promise<boolean> {
