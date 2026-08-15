@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { StatCard } from "@/components/content/StatCard";
 import { HubRow } from "@/module/settings/components/HubRow";
 import { ThemeSwitch } from "@/module/settings/components/ThemeSwitch";
+import { useBlocklist } from "@/module/settings/hooks/useBlocklist";
 import { useEntitlement } from "@/module/subscription/hooks/useEntitlement";
 import { routes } from "@/config/routes";
 import { useAuthStore } from "@/store/auth-store";
@@ -21,6 +22,7 @@ export function SettingsHubTemplate() {
   const styles = createStyles(colors);
   const { user, signOut } = useAuthStore();
   const { isPro } = useEntitlement();
+  const { blockedApps } = useBlocklist({ enabled: Platform.OS === "android" });
 
   if (!user) return null;
 
@@ -71,6 +73,7 @@ export function SettingsHubTemplate() {
             {Platform.OS === "android" && (
               <HubRow
                 label="Blocked Apps"
+                meta={blockedApps.length === 0 ? "No apps blocked" : `${blockedApps.length} app${blockedApps.length === 1 ? "" : "s"} blocked`}
                 leading={
                   <View style={styles.iconBadge}>
                     <Text style={styles.iconGlyph}>⊘</Text>

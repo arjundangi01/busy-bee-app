@@ -7,7 +7,7 @@ export type IBlocklistAppPayload = Pick<IBlockedApp, "packageName" | "appName">;
 
 const BLOCKLIST_QUERY_KEY = ["settings", "blocklist"];
 
-export function useBlocklist() {
+export function useBlocklist(options?: { enabled?: boolean }) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -16,6 +16,7 @@ export function useBlocklist() {
       const response = await apiClient.get<IApiResponse<IBlockedApp[]>>("/blocklist");
       return response.data.data ?? [];
     },
+    enabled: options?.enabled ?? true,
   });
 
   // Refetch on settle rather than writing the mutation's own response into the
