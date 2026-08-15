@@ -33,7 +33,9 @@ import { formatMinutesAsHoursAndMinutes } from "@/lib/utils/format";
 import { ISessionSummary, ITrendDay } from "@/types";
 import * as BlockingEnforcement from "../../../../modules/blocking-enforcement";
 
-const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+
+const getWeekdayLabel = (dateKey: string): string => WEEKDAY_LABELS[new Date(`${dateKey}T00:00:00Z`).getUTCDay()];
 const NOT_ENOUGH_DATA_YET = "Not enough data yet";
 const SCREEN_TIME_APP_LIMIT = 5;
 const RECENT_SESSIONS_LIMIT = 2;
@@ -170,7 +172,7 @@ export function HomeTemplate() {
             <View style={styles.trendSection}>
               <Text style={styles.trendLabel}>This week</Text>
               <View style={styles.trendRow}>
-                {dashboard.trend.map((day: ITrendDay, index: number) => (
+                {dashboard.trend.map((day: ITrendDay) => (
                   <View key={day.date} style={styles.trendCell}>
                     <View
                       style={[
@@ -179,7 +181,7 @@ export function HomeTemplate() {
                         day.status === "today" && styles.trendBarToday,
                       ]}
                     />
-                    <Text style={styles.trendDayLabel}>{DAY_LABELS[index % 7]}</Text>
+                    <Text style={styles.trendDayLabel}>{getWeekdayLabel(day.date)}</Text>
                   </View>
                 ))}
               </View>
