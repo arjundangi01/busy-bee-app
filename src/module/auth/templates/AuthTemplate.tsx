@@ -47,7 +47,7 @@ export function AuthTemplate({ initialMode }: AuthTemplateProps) {
         name: name.trim(),
         email: email.trim(),
         password,
-        backgroundExecutionGranted: permissions.backgroundExecutionGranted,
+        backgroundExecutionGranted: true,
         notificationsGranted: permissions.notificationsGranted,
       });
     } else {
@@ -58,7 +58,7 @@ export function AuthTemplate({ initialMode }: AuthTemplateProps) {
 
   const handleGoogleAuth = async () => {
     const result = await googleAuth.submit({
-      backgroundExecutionGranted: permissions.backgroundExecutionGranted,
+      backgroundExecutionGranted: true,
       notificationsGranted: permissions.notificationsGranted,
     });
     if (result) {

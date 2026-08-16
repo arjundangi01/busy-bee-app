@@ -11,40 +11,25 @@ import { useOnboardingPermissions } from "@/module/onboarding/context/Onboarding
 import { routes } from "@/config/routes";
 import { IColorTokens, spacing, useColors } from "@/theme";
 
-type OnboardingState = "A" | "B" | "C" | "D";
+type OnboardingState = "A" | "B" | "C";
 
-const STATE_INDEX: Record<OnboardingState, number> = { A: 0, B: 1, C: 2, D: 3 };
+const STATE_INDEX: Record<OnboardingState, number> = { A: 0, B: 1, C: 2 };
 
 export function OnboardingTemplate() {
   const colors = useColors();
   const styles = createStyles(colors);
   const [state, setState] = useState<OnboardingState>("A");
-  const { setBackgroundExecutionGranted, setNotificationsGranted } = useOnboardingPermissions();
-
-  const handleAllowBackground = async () => {
-    // No managed-Expo API can trigger a real OS "background execution" grant
-    // dialog — there is no such single permission on either platform (see
-    // 3.1's Technical Notes). Recording affirmative intent here is forward-
-    // compatible with whichever real enforcement mechanism gets decided
-    // (flagged as Open Item 1 in the DD-001 implementation plan).
-    setBackgroundExecutionGranted(true);
-    setState("C");
-  };
-
-  const handleSkipBackground = () => {
-    setBackgroundExecutionGranted(false);
-    setState("C");
-  };
+  const { setNotificationsGranted } = useOnboardingPermissions();
 
   const handleAllowNotifications = async () => {
     const result = await Notifications.requestPermissionsAsync();
     setNotificationsGranted(result.status === "granted");
-    setState("D");
+    setState("C");
   };
 
   const handleSkipNotifications = () => {
     setNotificationsGranted(false);
-    setState("D");
+    setState("C");
   };
 
   return (
@@ -55,32 +40,12 @@ export function OnboardingTemplate() {
             <Companion state="greeting" />
             <Text style={styles.headline}>I block distractions and stay with you until it&apos;s done.</Text>
             <Text style={styles.subline}>
-              Not motivation. Mechanism. Two quick permissions and I can actually hold it.
+              Not motivation. Mechanism. One quick permission and I can actually hold it.
             </Text>
           </View>
         )}
 
         {state === "B" && (
-          <View style={styles.centerColumn}>
-            <Pressable style={styles.skipLink} onPress={handleSkipBackground} hitSlop={12}>
-              <Text style={styles.skipText}>Skip for now</Text>
-            </Pressable>
-            <Text style={styles.icon}>🛡️</Text>
-            <Text style={styles.headline}>This has to keep working, even locked.</Text>
-            <View style={styles.whyBox}>
-              <Text style={styles.whyText}>
-                Blocking only means something if it survives you locking your phone or switching apps. This
-                lets busy-bee keep enforcing in the background.
-              </Text>
-            </View>
-            <Text style={styles.ceilingNote}>
-              No blocker is unbeatable — but turning this off mid-session takes a deliberate, multi-step
-              action, not one tap.
-            </Text>
-          </View>
-        )}
-
-        {state === "C" && (
           <View style={styles.centerColumn}>
             <Pressable style={styles.skipLink} onPress={handleSkipNotifications} hitSlop={12}>
               <Text style={styles.skipText}>Skip for now</Text>
@@ -96,7 +61,7 @@ export function OnboardingTemplate() {
           </View>
         )}
 
-        {state === "D" && (
+        {state === "C" && (
           <View style={styles.centerColumn}>
             <Companion state="greeting" />
             <Text style={styles.headline}>Set. Let&apos;s find your first mission.</Text>
@@ -105,13 +70,12 @@ export function OnboardingTemplate() {
         )}
       </Animated.View>
 
-      <ProgressDots total={4} current={STATE_INDEX[state]} />
+      <ProgressDots total={3} current={STATE_INDEX[state]} />
 
       <View style={styles.footer}>
         {state === "A" && <PrimaryButton label="Show me how" onPress={() => setState("B")} />}
-        {state === "B" && <PrimaryButton label="Allow background access" onPress={handleAllowBackground} />}
-        {state === "C" && <PrimaryButton label="Allow notifications" onPress={handleAllowNotifications} />}
-        {state === "D" && (
+        {state === "B" && <PrimaryButton label="Allow notifications" onPress={handleAllowNotifications} />}
+        {state === "C" && (
           <PrimaryButton label="Continue" onPress={() => router.push(routes.auth.signUp())} />
         )}
       </View>

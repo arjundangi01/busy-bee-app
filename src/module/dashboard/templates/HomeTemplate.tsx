@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  AppState,
-  AppStateStatus,
   Platform,
   Pressable,
   RefreshControl,
@@ -19,8 +16,10 @@ import { SessionListRow } from "@/components/content/SessionListRow";
 import { StatCard } from "@/components/content/StatCard";
 import { TopBar } from "@/components/navigation/TopBar";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { PermissionGapsSection } from "@/module/dashboard/components/PermissionGapsSection";
 import { useDashboard } from "@/module/dashboard/hooks/useDashboard";
 import { useRecentSessions } from "@/module/dashboard/hooks/useRecentSessions";
+import { useAccessibilityStatus } from "@/module/focus/hooks/useAccessibilityStatus";
 import { ScreenTimeAppRow } from "@/module/progress/components/ScreenTimeAppRow";
 import { UsageAccessPrompt } from "@/module/progress/components/UsageAccessPrompt";
 import { useIngestUsageStats } from "@/module/progress/hooks/useIngestUsageStats";
@@ -31,7 +30,6 @@ import { useAuthStore } from "@/store/auth-store";
 import { IColorTokens, spacing, useColors } from "@/theme";
 import { formatMinutesAsHoursAndMinutes } from "@/lib/utils/format";
 import { ISessionSummary, ITrendDay } from "@/types";
-import * as BlockingEnforcement from "../../../../modules/blocking-enforcement";
 
 const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -56,37 +54,24 @@ export function HomeTemplate() {
   // it's mounted — surfaced here too because a session can now stay active
   // while you're away from that screen (e.g. in Settings editing the
   // blocklist), and the permission being revoked mid-session would otherwise
-  // go unnoticed until you happen to navigate back into it.
-  const [isEnforcementActive, setIsEnforcementActive] = useState(true);
-  useEffect(() => {
-    if (!dashboard?.activeSession || Platform.OS !== "android") return;
-
-    const checkEnforcement = () => {
-      BlockingEnforcement.isAccessibilityServiceEnabled().then(setIsEnforcementActive);
-    };
-
-    checkEnforcement();
-    const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
-      if (nextState === "active") checkEnforcement();
-    });
-    return () => subscription.remove();
-  }, [dashboard?.activeSession]);
+  // go unnoticed until you happen to navigate back into it. Also doubles as
+  // the gate for the Start CTA below and for PermissionGapsSection's rows.
+  const isAccessibilityGranted = useAccessibilityStatus();
+  const permissionsGranted =
+    Platform.OS !== "android" || (isAccessibilityGranted === true && isUsageAccessGranted === true);
 
   // One-time just-in-time permission nudge (design-artifacts/evolution/specs/
   // 06-permission-priming.md) — routes through it instead of straight to
   // Start Mission Flow only the first time, only on Android, and only if the
   // permission isn't already granted some other way (e.g. via 5.1 Settings).
-  const handleStart = async () => {
+  const handleStart = () => {
     if (dashboard?.activeSession) {
       router.push(routes.focusSession(dashboard.activeSession.missionId));
       return;
     }
-    if (Platform.OS === "android" && user && !user.accessibilityPrimingShown) {
-      const isEnabled = await BlockingEnforcement.isAccessibilityServiceEnabled();
-      if (!isEnabled) {
-        router.push(routes.permissionPriming());
-        return;
-      }
+    if (Platform.OS === "android" && user && !user.accessibilityPrimingShown && isAccessibilityGranted === false) {
+      router.push(routes.permissionPriming());
+      return;
     }
     router.push(routes.startMission());
   };
@@ -141,7 +126,7 @@ export function HomeTemplate() {
                 <StatCard style={styles.activeSessionCard}>
                   <Text style={styles.activeSessionHeadline}>Focus session in progress</Text>
                   <Text style={styles.activeSessionMeta}>Tap to resume</Text>
-                  {!isEnforcementActive && (
+                  {isAccessibilityGranted === false && (
                     <Text style={styles.activeSessionWarning}>
                       Blocking permission is off — resume to fix it
                     </Text>
@@ -186,6 +171,8 @@ export function HomeTemplate() {
                 ))}
               </View>
             </View>
+
+            <PermissionGapsSection />
 
             <Pressable
               onPress={() => router.push(routes.eveningReview())}
@@ -279,7 +266,11 @@ export function HomeTemplate() {
       </ScrollView>
 
       <View style={styles.ctaWrapper}>
-        <PrimaryButton label="Start" onPress={handleStart} />
+        {dashboard?.activeSession || permissionsGranted ? (
+          <PrimaryButton label="Start" onPress={handleStart} />
+        ) : (
+          <PrimaryButton label="Allow permissions to start" onPress={handleStart} disabled />
+        )}
       </View>
     </SafeAreaView>
   );

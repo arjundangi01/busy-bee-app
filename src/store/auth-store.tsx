@@ -1,12 +1,27 @@
-import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { router } from "expo-router";
 import axios from "axios";
 import { apiClient } from "@/lib/api";
 import { loginToPurchases, logoutOfPurchases } from "@/lib/purchases";
-import { clearStoredToken, getStoredToken, setStoredToken } from "@/lib/utils/session";
+import {
+  clearStoredToken,
+  getStoredToken,
+  setStoredToken,
+} from "@/lib/utils/session";
 import { routes } from "@/config/routes";
 import { IApiResponse, IAuthResult, IUser } from "@/types";
-import { endFocusSession, fetchActiveFocusSession } from "@/module/focus/hooks/useFocusSession";
+import {
+  endFocusSession,
+  fetchActiveFocusSession,
+} from "@/module/focus/hooks/useFocusSession";
 import { SESSION_END_REASON } from "@/utils/enums";
 import * as BlockingEnforcement from "../../modules/blocking-enforcement";
 
@@ -48,7 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const response = await apiClient.get<IApiResponse<IAuthResult>>("/auth/me");
+        const response =
+          await apiClient.get<IApiResponse<IAuthResult>>("/auth/me");
         const result = response.data.data;
         if (result && sessionGenerationRef.current === bootstrapGeneration) {
           setUser(result.user);
@@ -63,8 +79,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // doesn't depend on the backend) keeps enforcing regardless. See
         // docs/session-lifecycle-reliability-fixes.md item 5.
         const isUnauthorized =
-          axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403);
-        if (isUnauthorized && sessionGenerationRef.current === bootstrapGeneration) {
+          axios.isAxiosError(error) &&
+          (error.response?.status === 401 || error.response?.status === 403);
+        if (
+          isUnauthorized &&
+          sessionGenerationRef.current === bootstrapGeneration
+        ) {
           await clearStoredToken();
           // This path bypasses signOut() entirely (there's no user session
           // to sign out of yet), so it needs its own native clear — same
@@ -105,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await endFocusSession(active.id, SESSION_END_REASON.EARLY_EXIT);
       }
     } catch {
+      console.error("Failed to end focus session");
       // Best-effort — see docs/session-lifecycle-reliability-fixes.md item 3.
     }
 
@@ -125,7 +146,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [isBootstrapping, user],
   );
 
-  return <AuthStoreContext.Provider value={value}>{children}</AuthStoreContext.Provider>;
+  return (
+    <AuthStoreContext.Provider value={value}>
+      {children}
+    </AuthStoreContext.Provider>
+  );
 }
 
 export function useAuthStore(): AuthStoreValue {

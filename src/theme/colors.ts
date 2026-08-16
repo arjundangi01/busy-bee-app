@@ -14,6 +14,7 @@ export type IColorTokens = {
   accentGradient: readonly [string, string, string];
   accentGlow: string;
   danger: string;
+  dangerGlow: string;
   warning: string;
   warningGlow: string;
 };
@@ -40,6 +41,7 @@ const dark: IColorTokens = {
   accentGradient: ["#f0cb7a", "#d4a943", "#a67b1f"],
   accentGlow: "rgba(212,169,67,0.5)",
   danger: "#FF7A7A",
+  dangerGlow: "rgba(255,122,122,0.09)",
   warning: "#e0954a",
   warningGlow: "rgba(224,149,74,0.16)",
 };
@@ -60,6 +62,7 @@ const light: IColorTokens = {
   accentGradient: ["#f0cb7a", "#d4a943", "#a67b1f"],
   accentGlow: "rgba(212,169,67,0.35)",
   danger: "#C23B3B",
+  dangerGlow: "rgba(194,59,59,0.07)",
   warning: "#a8621f",
   warningGlow: "rgba(168,98,31,0.12)",
 };

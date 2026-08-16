@@ -77,7 +77,7 @@ class BlockingEnforcementModule : Module() {
             val context = requireContext()
             BlockingPrefs.clearActiveSession(context)
             context.stopService(Intent(context, FocusSessionForegroundService::class.java))
-            WorkManager.getInstance(context).cancelUniqueWork(EXPIRY_WORK_NAME)
+            cancelExpiryWork(context)
         }
 
         // Consume-all: returns every unread collision (queued, not just the
@@ -118,6 +118,14 @@ class BlockingEnforcementModule : Module() {
             .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(EXPIRY_WORK_NAME, ExistingWorkPolicy.REPLACE, request)
+    }
+
+    // Block-bodied fun, not an inline call in the AsyncFunction lambda: Kotlin infers a
+    // block-bodied fun's return type as Unit regardless of its last expression, whereas
+    // the lambda directly returning WorkManager's cancelUniqueWork() infers Operation —
+    // which Expo's bridge can't serialize ("Unknown type: class androidx.work.impl.OperationImpl").
+    private fun cancelExpiryWork(context: Context) {
+        WorkManager.getInstance(context).cancelUniqueWork(EXPIRY_WORK_NAME)
     }
 
     // Standard ENABLED_ACCESSIBILITY_SERVICES colon-separated-list check —
